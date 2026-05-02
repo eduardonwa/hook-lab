@@ -9,6 +9,7 @@ use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use App\Filament\Pages\Dashboard;
+use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -48,6 +49,9 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
             ])
             ->topNavigation()
+            ->navigationGroups([
+                NavigationGroup::make('Planeador')
+            ])
             ->darkMode(true)
             ->defaultThemeMode(ThemeMode::Dark)
             ->middleware([

@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('cycle_id')->constrained()->cascadeOnDelete();
             $table->foreignId('hook_id')->constrained()->cascadeOnDelete();
             $table->foreignId('idea_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->boolean('is_favorite')->default(false);
             $table->unsignedInteger('position');
             $table->timestamps();
 

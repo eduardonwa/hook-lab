@@ -26,17 +26,19 @@ class HookManager extends Page implements HasTable
     use InteractsWithTable;
 
     protected string $view = 'filament.pages.hook-manager';
-
+    
     protected static string | \BackedEnum | null $navigationIcon = 'icon-hook-icon';
-
+    protected static string | \UnitEnum | null $navigationGroup = 'Planeador';
+    protected static ?string $title = 'Hooks';
     protected static ?string $navigationLabel = 'Hooks';
-
-    protected static ?int $navigationSort = 2;
-
+    protected static ?int $navigationSort = 1;
+    
     public string $activeTab = 'library';
     public string $groupSortDirection = 'desc';
+    
     public ?int $selectedGroupId = null;
     public ?int $expandedHookId = null;
+
 
     public function setActiveTab(string $tab): void
     {
@@ -258,7 +260,7 @@ class HookManager extends Page implements HasTable
             });
     }
 
-        public function table(Table $table): Table
+    public function table(Table $table): Table
     {
         return $table
             ->query(Hook::query())

@@ -11,6 +11,10 @@ use Illuminate\Validation\ValidationException;
 
 class CycleItem extends Model
 {
+    protected $casts = [
+        'is_favorite' => 'boolean'
+    ];
+    
     protected static function booted(): void
     {
         static::saving(function ($item) {

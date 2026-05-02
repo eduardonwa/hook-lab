@@ -8,7 +8,7 @@
                     </h2>
 
                     <p class="text-sm text-gray-500 dark:text-gray-400">
-                        Saca un hook del baúl
+                        ¡Buena suerte!
                     </p>
                 </div>
 
@@ -41,7 +41,7 @@
                     <p class="whitespace-pre-line mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">{{ trim($this->selectedHook->description) }}</p>
                 @else
                     <p class="text-sm text-gray-500 dark:text-gray-400">
-                        Gira primero. Deja que el sistema elija tu suerte.
+                        Que caiga el hook
                     </p>
                 @endif
             </div>
