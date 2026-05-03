@@ -4,11 +4,11 @@
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <h2 class="text-base font-semibold text-gray-950 dark:text-white">
-                        Ruleta de hooks
+                        Saca hook
                     </h2>
 
                     <p class="text-sm text-gray-500 dark:text-gray-400">
-                        ¡Buena suerte!
+                        Gira y descubre qué publicar hoy
                     </p>
                 </div>
 
@@ -16,10 +16,10 @@
                     wire:click="generateHook"
                     wire:loading.attr="disabled"
                     wire:target="generateHook"
-                    icon="heroicon-m-sparkles"
+                    icon="heroicon-m-arrow-path"
                 >
                     <span wire:loading.remove wire:target="generateHook">
-                        Girar hook
+                        Girar
                     </span>
 
                     <span wire:loading wire:target="generateHook">
@@ -41,7 +41,7 @@
                     <p class="whitespace-pre-line mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">{{ trim($this->selectedHook->description) }}</p>
                 @else
                     <p class="text-sm text-gray-500 dark:text-gray-400">
-                        Que caiga el hook
+                        Deja que caiga
                     </p>
                 @endif
             </div>
