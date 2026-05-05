@@ -39,7 +39,6 @@ class HookManager extends Page implements HasTable
     public ?int $selectedGroupId = null;
     public ?int $expandedHookId = null;
 
-
     public function setActiveTab(string $tab): void
     {
         $this->activeTab = $tab;
