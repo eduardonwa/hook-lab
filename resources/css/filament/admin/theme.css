@@ -2,3 +2,7 @@
 
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
+
+.idea-select-with-create button svg {
+    color: oklch(74% 0.238 322.16);
+}
