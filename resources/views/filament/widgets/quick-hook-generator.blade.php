@@ -1,5 +1,5 @@
 <x-filament-widgets::widget>
-    <x-filament::section>
+    <div>
         <div class="flex flex-col gap-4">
             <div class="flex items-start justify-between gap-4">
                 <div>
@@ -46,5 +46,5 @@
                 @endif
             </div>
         </div>
-    </x-filament::section>
+    </div>
 </x-filament-widgets::widget>

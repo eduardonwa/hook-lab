@@ -12,7 +12,8 @@ use Illuminate\Validation\ValidationException;
 class CycleItem extends Model
 {
     protected $casts = [
-        'is_favorite' => 'boolean'
+        'is_pinned' => 'boolean',
+        'pinned_at' => 'datetime'
     ];
     
     protected static function booted(): void
