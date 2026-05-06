@@ -19,7 +19,7 @@
                         </div>
 
                         <p class="text-sm text-gray-500">
-                            {{ $cycle->items_count }} cartas
+                            {{ $cycle->items_count }} cartas · {{ $cycle->bag_hooks_count }} en bolsa
                         </p>
                     </div>
                 </button>

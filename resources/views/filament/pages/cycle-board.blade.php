@@ -11,7 +11,7 @@
                 </h1>
 
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    {{ $this->items->count() }} cartas en la baraja
+                    {{ $this->itemsCount }} cartas · {{ $this->bagHooksCount }} hooks en bolsa
                 </p>
             </div>
 
@@ -32,6 +32,20 @@
                     Tabla
                 </x-filament::button>
             </div>
+
+            @if ($this->bagHooksCount > 0)
+                <x-filament::button
+                    size="sm"
+                    color="gray"
+                    wire:click="mountAction('addFromBag')"
+                >
+                    Agregar desde bolsa
+                </x-filament::button>
+            @else
+                <span class="text-xs text-gray-500">
+                    Bolsa vacía
+                </span>
+            @endif
         </section>
 
         @if ($viewMode === 'cards')
@@ -71,6 +85,8 @@
                                 @if ($item->idea_id)
                                     {{ ($this->editIdeaAction)(['item_id' => $item->id]) }}
                                 @endif
+
+                                {{ ($this->removeItemAction)(['item_id' => $item->id]) }}
                             </div>
                         </div>
                     </article>
@@ -131,6 +147,8 @@
                                                 @if ($item->idea_id)
                                                     {{ ($this->editIdeaAction)(['item_id' => $item->id]) }}
                                                 @endif
+
+                                                {{ ($this->removeItemAction)(['item_id' => $item->id]) }}
                                             </div>
                                         </td>
                                     </tr>

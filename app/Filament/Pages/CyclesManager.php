@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Filament\Pages\CycleBoard;
 use App\Models\Cycle;
 use App\Models\Hook;
+use App\Models\HookGroup;
 use App\Services\CycleNameGenerator;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -13,6 +14,7 @@ use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Pages\Page;
+use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\DB;
 
 class CyclesManager extends Page implements HasActions
@@ -34,11 +36,12 @@ class CyclesManager extends Page implements HasActions
     public function createCycleAction(): Action
     {
         return Action::make('createCycle')
-            ->label('Crear baraja')
+            ->label('Nueva baraja')
             ->icon('heroicon-o-rectangle-stack')
             ->color('primary')
-            ->modalHeading('Crear baraja')
-            ->modalSubmitActionLabel('Crear baraja')
+            ->modalWidth(Width::Medium)
+            ->modalHeading('')
+            ->modalSubmitActionLabel('Nueva baraja')
             ->schema([
                 TextInput::make('name')
                     ->label('Nombre')
@@ -50,8 +53,9 @@ class CyclesManager extends Page implements HasActions
                     ->label('¿Cómo quieres comenzar?')
                     ->options([
                         'empty' => 'En blanco',
+                        'full' => 'Con todos los hooks',
                         'random_hooks' => 'Empezar con hooks al azar',
-                        'selected_hooks' => 'Sé lo que estoy haciendo',
+                        'group_hooks' => 'Cargar grupo',
                     ])
                     ->default('empty')
                     ->required()
@@ -67,13 +71,18 @@ class CyclesManager extends Page implements HasActions
                     ->visible(fn ($get) => $get('start_mode') === 'random_hooks')
                     ->required(fn ($get) => $get('start_mode') === 'random_hooks'),
 
-                Select::make('hook_ids')
-                    ->label('Hooks')
+                Select::make('hook_group_ids')
+                    ->label('Grupos de hooks')
                     ->multiple()
                     ->searchable()
                     ->preload()
-                    ->options(fn () => Hook::query()->pluck('name', 'id')->toArray())
-                    ->visible(fn ($get) => $get('start_mode') === 'selected_hooks'),
+                    ->options(fn () => HookGroup::query()
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->toArray()
+                    )
+                    ->visible(fn ($get) => $get('start_mode') === 'group_hooks')
+                    ->required(fn ($get) => $get('start_mode') === 'group_hooks'),
             ])
             ->action(function (array $data): void {
                 DB::transaction(function () use ($data) {
@@ -83,10 +92,6 @@ class CyclesManager extends Page implements HasActions
 
                     $selectedHookIds = [];
 
-                    if ($data['start_mode'] === 'selected_hooks') {
-                        $selectedHookIds = $data['hook_ids'] ?? [];
-                    }
-
                     if ($data['start_mode'] === 'random_hooks') {
                         $selectedHookIds = Hook::query()
                             ->inRandomOrder()
@@ -95,11 +100,35 @@ class CyclesManager extends Page implements HasActions
                             ->all();
                     }
 
+                    if ($data['start_mode'] === 'group_hooks') {
+                        $selectedHookIds = Hook::query()
+                            ->whereHas('groups', function ($query) use ($data) {
+                                $query->whereIn('hook_groups.id', $data['hook_group_ids'] ?? []);
+                            })
+                            ->orderBy('id')
+                            ->pluck('id')
+                            ->all();
+                    }
+
+                    if ($data['start_mode'] === 'full') {
+                        $selectedHookIds = Hook::query()
+                            ->orderBy('id')
+                            ->pluck('id')
+                            ->all();
+                    }
+
+                    $selectedHookIds = collect($selectedHookIds)
+                        ->filter()
+                        ->unique()
+                        ->values()
+                        ->all();
+
                     $cycle = Cycle::create([
                         'name' => $data['name'],
                         'generation_mode' => match ($data['start_mode']) {
                             'random_hooks' => 'azar',
-                            'selected_hooks' => 'manual',
+                            'group_hooks' => 'group',
+                            'full' => 'full',
                             default => 'empty',
                         },
                         'size' => count($selectedHookIds),
@@ -119,6 +148,28 @@ class CyclesManager extends Page implements HasActions
                                 'position' => $index + 1,
                                 'idea_id' => null,
                             ]);
+                        }
+                    }
+
+                    if ($data['start_mode'] !== 'full') {
+                        $remainingHookIds = Hook::query()
+                            ->whereNotIn('id', $selectedHookIds)
+                            ->pluck('id')
+                            ->all();
+
+                        if (count($remainingHookIds)) {
+                            $now = now();
+
+                            DB::table('cycle_hook_bag')->insert(
+                                collect($remainingHookIds)
+                                    ->map(fn ($hookId) => [
+                                        'cycle_id' => $cycle->id,
+                                        'hook_id' => $hookId,
+                                        'created_at' => $now,
+                                        'updated_at' => $now,
+                                    ])
+                                    ->all()
+                            );
                         }
                     }
                 });
@@ -172,7 +223,7 @@ class CyclesManager extends Page implements HasActions
 
     public function getCyclesProperty()
     {
-        return Cycle::withCount('items')
+        return Cycle::withCount(['items', 'bagHooks'])
             ->latest()
             ->get();
     }

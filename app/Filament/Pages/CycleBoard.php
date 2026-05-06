@@ -9,6 +9,7 @@ use App\Models\Idea;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -17,6 +18,7 @@ use Filament\Pages\Page;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
+use Illuminate\Support\Facades\DB;
 
 class CycleBoard extends Page implements HasActions
 {
@@ -29,6 +31,8 @@ class CycleBoard extends Page implements HasActions
     public string $viewMode = 'cards';
 
     public Cycle $cycle;
+    public int $itemsCount = 0;
+    public int $bagHooksCount = 0;
     public ?int $editingItemId = null;
     public ?string $editingHookName = null;
     public ?string $editingHookDescription = null;
@@ -36,6 +40,16 @@ class CycleBoard extends Page implements HasActions
     public function mount(Cycle $cycle): void
     {
         $this->cycle = $cycle;
+
+        $this->refreshCycle();
+    }
+
+    protected function refreshCycle(): void
+    {
+        $this->cycle = $this->cycle->fresh();
+
+        $this->itemsCount = $this->cycle->items()->count();
+        $this->bagHooksCount = $this->cycle->bagHooks()->count();
     }
 
     public function getBreadcrumbs(): array
@@ -189,7 +203,9 @@ class CycleBoard extends Page implements HasActions
                 ]);
 
                 $this->editingItemId = null;
-
+                
+                $this->refreshCycle();
+                
                 $this->dispatch('$refresh');
             });
     }
@@ -246,8 +262,173 @@ class CycleBoard extends Page implements HasActions
 
                 $this->editingItemId = null;
 
+                $this->refreshCycle();
+
                 $this->dispatch('$refresh');
             })
             ->slideOver();
+    }
+
+    protected function addHooksToCycleFromBag(array $hookIds): void
+    {
+        DB::transaction(function () use ($hookIds) {
+            $hookIds = collect($hookIds)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            if (empty($hookIds)) {
+                return;
+            }
+
+            $availableHookIds = $this->cycle
+                ->bagHooks()
+                ->whereIn('hooks.id', $hookIds)
+                ->pluck('hooks.id')
+                ->all();
+
+            $availableHookIds = collect($availableHookIds)
+                ->sortBy(fn ($hookId) => array_search($hookId, $hookIds))
+                ->values()
+                ->all();
+
+            if (empty($availableHookIds)) {
+                return;
+            }
+
+            $nextPosition = ((int) $this->cycle->items()->max('position')) + 1;
+
+            foreach ($availableHookIds as $index => $hookId) {
+                $this->cycle->items()->create([
+                    'hook_id' => $hookId,
+                    'idea_id' => null,
+                    'position' => $nextPosition + $index,
+                ]);
+            }
+
+            $this->cycle->bagHooks()->detach($availableHookIds);
+
+            $this->cycle->update([
+                'size' => $this->cycle->items()->count(),
+            ]);
+        });
+
+        $this->refreshCycle();
+    }
+
+    public function addFromBagAction(): Action
+    {
+        return Action::make('addFromBag')
+            ->label('Agregar desde bolsa')
+            ->icon('heroicon-o-plus-circle')
+            ->color('gray')
+            ->modalWidth(Width::Medium)
+            ->modalHeading('Agregar hooks desde la bolsa')
+            ->modalSubmitActionLabel('Agregar')
+            ->modalCancelActionLabel('Cancelar')
+            ->schema([
+                Radio::make('bag_mode')
+                    ->label('¿Cómo quieres agregar?')
+                    ->options([
+                        'random' => 'Sacar hooks al azar',
+                        'manual' => 'Elegir hooks',
+                    ])
+                    ->default('random')
+                    ->required()
+                    ->live(),
+
+                TextInput::make('random_count')
+                    ->label('Cantidad')
+                    ->numeric()
+                    ->minValue(1)
+                    ->maxValue(fn () => $this->bagHooksCount)
+                    ->default(1)
+                    ->visible(fn ($get) => $get('bag_mode') === 'random')
+                    ->required(fn ($get) => $get('bag_mode') === 'random'),
+
+                Select::make('hook_ids')
+                    ->label('Hooks disponibles')
+                    ->multiple()
+                    ->searchable()
+                    ->preload()
+                    ->options(fn () => $this->cycle
+                        ->fresh()
+                        ->bagHooks()
+                        ->orderBy('name')
+                        ->pluck('name', 'hooks.id')
+                        ->toArray()
+                    )
+                    ->visible(fn ($get) => $get('bag_mode') === 'manual')
+                    ->required(fn ($get) => $get('bag_mode') === 'manual'),
+            ])
+            ->action(function (array $data): void {
+                if ($data['bag_mode'] === 'random') {
+                    $hookIds = $this->cycle
+                        ->fresh()
+                        ->bagHooks()
+                        ->inRandomOrder()
+                        ->limit((int) $data['random_count'])
+                        ->pluck('hooks.id')
+                        ->all();
+
+                    $this->addHooksToCycleFromBag($hookIds);
+                }
+
+                if ($data['bag_mode'] === 'manual') {
+                    $this->addHooksToCycleFromBag($data['hook_ids'] ?? []);
+                }
+
+                $this->refreshCycle();
+
+                $this->dispatch('$refresh');
+            });
+    }
+
+    public function removeItemAction(): Action
+    {
+        return Action::make('removeItem')
+            ->label('Quitar carta')
+            ->icon('heroicon-o-trash')
+            ->color('danger')
+            ->requiresConfirmation()
+            ->modalHeading('Quitar carta de la baraja')
+            ->modalDescription('El hook volverá a la bolsa para que puedas usarlo después.')
+            ->action(function (array $arguments): void {
+                DB::transaction(function () use ($arguments) {
+                    $item = CycleItem::query()
+                        ->where('cycle_id', $this->cycle->id)
+                        ->findOrFail((int) $arguments['item_id']);
+
+                    $hookId = $item->hook_id;
+
+                    $item->delete();
+
+                    $this->cycle->bagHooks()->syncWithoutDetaching([
+                        $hookId => [
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ],
+                    ]);
+
+                    $this->cycle
+                        ->items()
+                        ->orderBy('position')
+                        ->get()
+                        ->values()
+                        ->each(function (CycleItem $item, int $index) {
+                            $item->update([
+                                'position' => $index + 1,
+                            ]);
+                        });
+
+                    $this->cycle->update([
+                        'size' => $this->cycle->items()->count(),
+                    ]);
+                });
+
+                $this->refreshCycle();
+                $this->dispatch('$refresh');
+            });
     }
 }

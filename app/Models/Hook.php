@@ -27,4 +27,14 @@ class Hook extends Model
     {
         return $this->hasMany(CycleItem::class);
     }
+
+    public function cycleBags(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Cycle::class,
+            'cycle_hook_bag',
+            'hook_id',
+            'cycle_id'
+        )->withTimestamps();
+    }
 }
