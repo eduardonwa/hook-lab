@@ -3,18 +3,20 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Pages\CycleBoard;
-use App\Models\Cycle;
 use App\Models\Hook;
 use App\Models\HookGroup;
 use App\Services\CycleNameGenerator;
+use App\Services\PlanLimitService;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Enums\Width;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class CyclesManager extends Page implements HasActions
@@ -52,7 +54,7 @@ class CyclesManager extends Page implements HasActions
                 Radio::make('start_mode')
                     ->label('¿Cómo quieres comenzar?')
                     ->options(function () {
-                        $hasHooks = Hook::query()->exists();
+                        $hasHooks = $this->availableHooksQuery()->exists();
 
                         return [
                             'empty' => 'En blanco',
@@ -72,12 +74,12 @@ class CyclesManager extends Page implements HasActions
                     ->suffix('hooks al azar')
                     ->numeric()
                     ->minValue(1)
-                    ->maxValue(fn () => Hook::query()->count())
-                    ->default(fn () => min(34, Hook::query()->count()))
-                    ->disabled(fn () => Hook::query()->count() === 0)
+                    ->maxValue(fn () => $this->maxHooksPerCycle())
+                    ->default(fn () => $this->maxHooksPerCycle())
+                    ->disabled(fn () => $this->availableHooksQuery()->count() === 0)
                     ->live()
                     ->helperText(function ($get) {
-                        $totalHooks = Hook::query()->count();
+                        $totalHooks = $this->maxHooksPerCycle();
                         $count = (int) ($get('random_hooks_count') ?? 0);
 
                         if ($totalHooks === 0) {
@@ -101,6 +103,11 @@ class CyclesManager extends Page implements HasActions
                     ->searchable()
                     ->preload()
                     ->options(fn () => HookGroup::query()
+                        ->whereHas('hooks', function ($query) {
+                            if (! Auth::user()->isPro()) {
+                                $query->where('access_level', 'free');
+                            }
+                        })
                         ->orderBy('name')
                         ->pluck('name', 'id')
                         ->toArray()
@@ -109,22 +116,37 @@ class CyclesManager extends Page implements HasActions
                     ->required(fn ($get) => $get('start_mode') === 'group_hooks'),
             ])
             ->action(function (array $data): void {
-                DB::transaction(function () use ($data) {
-                    Cycle::query()->update([
+                $user = Auth::user();
+                
+                /** @var PlanLimitService $limits */
+                $limits = app(PlanLimitService::class);
+
+                if (! $limits->canCreateDeck($user)) {
+                    Notification::make()
+                        ->title('Límite alcanzado')
+                        ->body('El plan gratis permite crear 1 baraja')
+                        ->warning()
+                        ->send();
+                    
+                    return;
+                }
+
+                DB::transaction(function () use ($data, $user, $limits) {
+                    $user->cycles()->update([
                         'is_active' => false,
                     ]);
 
                     $selectedHookIds = [];
 
                     if ($data['start_mode'] === 'random_hooks') {
-                        $totalHooks = Hook::query()->count();
+                        $totalHooks = $this->availableHooksQuery()->count();
 
                         $count = min(
                             (int) ($data['random_hooks_count'] ?? 1),
                             $totalHooks,
                         );
 
-                        $selectedHookIds = Hook::query()
+                        $selectedHookIds = $this->availableHooksQuery()
                             ->inRandomOrder()
                             ->limit($count)
                             ->pluck('id')
@@ -132,7 +154,7 @@ class CyclesManager extends Page implements HasActions
                     }
 
                     if ($data['start_mode'] === 'group_hooks') {
-                        $selectedHookIds = Hook::query()
+                        $selectedHookIds = $this->availableHooksQuery()
                             ->whereHas('groups', function ($query) use ($data) {
                                 $query->whereIn('hook_groups.id', $data['hook_group_ids'] ?? []);
                             })
@@ -142,7 +164,7 @@ class CyclesManager extends Page implements HasActions
                     }
 
                     if ($data['start_mode'] === 'full') {
-                        $selectedHookIds = Hook::query()
+                        $selectedHookIds = $this->availableHooksQuery()
                             ->orderBy('id')
                             ->pluck('id')
                             ->all();
@@ -154,7 +176,16 @@ class CyclesManager extends Page implements HasActions
                         ->values()
                         ->all();
 
-                    $cycle = Cycle::create([
+                    $maxIdeasPerDeck = $limits->limit($user, 'max_ideas_per_deck');
+
+                    if (! is_null($maxIdeasPerDeck)) {
+                        $selectedHookIds = collect($selectedHookIds)
+                            ->take($maxIdeasPerDeck)
+                            ->values()
+                            ->all();
+                    }
+
+                    $cycle = $user->cycles()->create([
                         'name' => $data['name'],
                         'generation_mode' => match ($data['start_mode']) {
                             'random_hooks' => 'azar',
@@ -183,7 +214,7 @@ class CyclesManager extends Page implements HasActions
                     }
 
                     if ($data['start_mode'] !== 'full') {
-                        $remainingHookIds = Hook::query()
+                        $remainingHookIds = $this->availableHooksQuery()
                             ->whereNotIn('id', $selectedHookIds)
                             ->pluck('id')
                             ->all();
@@ -215,7 +246,9 @@ class CyclesManager extends Page implements HasActions
             ->label('Ver baraja')
             ->icon('heroicon-o-eye')
             ->modalHeading(function (array $arguments): string {
-                $cycle = Cycle::find($arguments['cycle_id']);
+                $cycle = Auth::user()
+                    ->cycles()
+                    ->find($arguments['cycle_id']);
 
                 return $cycle?->name ?? 'Baraja';
             })
@@ -225,7 +258,8 @@ class CyclesManager extends Page implements HasActions
                 'class' => 'ml-auto',
             ])
             ->modalContent(function (array $arguments) {
-                $cycle = Cycle::query()
+                $cycle = Auth::user()
+                    ->cycles()
                     ->with([
                         'items.hook',
                         'items.idea',
@@ -254,7 +288,9 @@ class CyclesManager extends Page implements HasActions
 
     public function getCyclesProperty()
     {
-        return Cycle::withCount(['items', 'bagHooks'])
+        return Auth::user()
+            ->cycles()
+            ->withCount(['items', 'bagHooks'])
             ->latest()
             ->get();
     }
@@ -271,11 +307,42 @@ class CyclesManager extends Page implements HasActions
             ->modalSubmitActionLabel('Eliminar')
             ->modalCancelActionLabel('Cancelar')
             ->action(function (array $arguments): void {
-                $cycle = Cycle::query()->findOrFail((int) $arguments['cycle_id']);
+                $cycle = Auth::user()
+                    ->cycles()
+                    ->findOrFail((int) $arguments['cycle_id']);
 
                 $cycle->delete();
 
                 $this->dispatch('$refresh');
             });
+    }
+
+    protected function availableHooksQuery()
+    {
+        $query = Hook::query();
+
+        if (! Auth::user()->isPro()) {
+            $query->where('access_level', 'free');
+        }
+
+        return $query;
+    }
+
+    protected function maxHooksPerCycle(): int
+    {
+        $user = Auth::user();
+
+        /** @var PlanLimitService $limits */
+        $limits = app(PlanLimitService::class);
+
+        $availableHooksCount = $this->availableHooksQuery()->count();
+
+        $planLimit = $limits->limit($user, 'max_ideas_per_deck');
+
+        if (is_null($planLimit)) {
+            return $availableHooksCount;
+        }
+
+        return min($availableHooksCount, $planLimit);
     }
 }

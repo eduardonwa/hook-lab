@@ -2,8 +2,9 @@
 
 namespace Database\Seeders;
 
+use Database\Seeders\FreeHookSeeder;
+use Database\Seeders\FreeUserSeeder;
 use Database\Seeders\HookSeeder;
-use Database\Seeders\LocalAppUserSeeder;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -16,7 +17,8 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
 
         $this->call([
-            LocalAppUserSeeder::class,
+            FreeUserSeeder::class,
+            FreeHookSeeder::class,
             HookSeeder::class
         ]);
     }

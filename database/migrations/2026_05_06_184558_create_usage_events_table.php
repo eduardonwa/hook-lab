@@ -11,13 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('hooks', function (Blueprint $table) {
+        Schema::create('usage_events', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
-            $table->string('slug')->unique();
-            $table->text('description')->nullable();
-            $table->string('access_level')->default('pro')->index();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+
+            $table->string('feature');
             $table->timestamps();
+
+            $table->index(['user_id', 'feature', 'created_at']);
         });
     }
 
@@ -26,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('hooks');
+        Schema::dropIfExists('usage_events');
     }
 };

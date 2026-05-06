@@ -3,7 +3,10 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Hook;
+use App\Services\PlanLimitService;
+use Filament\Notifications\Notification;
 use Filament\Widgets\Widget;
+use Illuminate\Support\Facades\Auth;
 
 class QuickHookGenerator extends Widget
 {
@@ -15,7 +18,26 @@ class QuickHookGenerator extends Widget
 
     public function generateHook(): void
     {
+        $user = Auth::user();
+
+        /** @var PlanLimitService $limits */
+        $limits = app(PlanLimitService::class);
+
+        if (! $limits->canUseQuickHookGenerator($user)) {
+            Notification::make()
+                ->title('Límite diario alcanzado')
+                ->body('El plan gratis permite 7 generaciones por día.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
         $query = Hook::query();
+
+        if (! $user->isPro()) {
+            $query->where('access_level', 'free');
+        }
 
         if (! empty($this->recentHookIds)) {
             $query->whereNotIn('id', $this->recentHookIds);
@@ -25,21 +47,37 @@ class QuickHookGenerator extends Widget
             ->inRandomOrder()
             ->value('id');
 
-        // Si ya se acabaron las opciones disponibles, reinicia el historial.
         if (! $hookId) {
             $this->recentHookIds = [];
 
-            $hookId = Hook::query()
+            $query = Hook::query();
+
+            if (! $user->isPro()) {
+                $query->where('access_level', 'free');
+            }
+
+            $hookId = $query
                 ->inRandomOrder()
                 ->value('id');
+        }
+
+        if (! $hookId) {
+            Notification::make()
+                ->title('No hay hooks disponibles')
+                ->body('No se encontró ningún hook para generar.')
+                ->warning()
+                ->send();
+
+            return;
         }
 
         $this->selectedHookId = $hookId;
 
         $this->recentHookIds[] = $hookId;
 
-        // Mantener solo los últimos 5.
         $this->recentHookIds = array_slice($this->recentHookIds, -7);
+
+        $limits->recordQuickHookGeneratorUse($user);
     }
 
     public function getSelectedHookProperty(): ?Hook

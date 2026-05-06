@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
+use App\Models\Cycle;
 use App\Models\Hook;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -11,11 +12,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Cashier\Billable;
 
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, Billable;
 
     /**
      * The attributes that are mass assignable.
@@ -56,9 +58,14 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(Hook::class);
     }
 
+    public function cycles(): HasMany
+    {
+        return $this->hasMany(Cycle::class);
+    }
+
     public function canAccessPanel(Panel $panel):bool
     {
-        return $this->email === 'app@hooklab.local';
+        return true;
     }
 
     public function isPro(): bool
@@ -66,13 +73,13 @@ class User extends Authenticatable implements FilamentUser
         return $this->subscribed('default');
     }
 
-    public function plan(): string
+    public function planName(): string
     {
         return $this->isPro() ? 'pro' : 'free';
     }
 
     public function limits(): array
     {
-        return config('plans.' . $this->plan(), []);
+        return config('plans.' . $this->planName(), []);
     }
 }
