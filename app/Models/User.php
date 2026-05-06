@@ -4,9 +4,11 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
+use App\Models\Hook;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -49,8 +51,28 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
+    public function customHooks(): HasMany
+    {
+        return $this->hasMany(Hook::class);
+    }
+
     public function canAccessPanel(Panel $panel):bool
     {
         return $this->email === 'app@hooklab.local';
+    }
+
+    public function isPro(): bool
+    {
+        return $this->subscribed('default');
+    }
+
+    public function plan(): string
+    {
+        return $this->isPro() ? 'pro' : 'free';
+    }
+
+    public function limits(): array
+    {
+        return config('plans.' . $this->plan(), []);
     }
 }
