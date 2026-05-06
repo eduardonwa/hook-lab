@@ -51,23 +51,47 @@ class CyclesManager extends Page implements HasActions
 
                 Radio::make('start_mode')
                     ->label('¿Cómo quieres comenzar?')
-                    ->options([
-                        'empty' => 'En blanco',
-                        'full' => 'Con todos los hooks',
-                        'random_hooks' => 'Empezar con hooks al azar',
-                        'group_hooks' => 'Cargar grupo',
-                    ])
+                    ->options(function () {
+                        $hasHooks = Hook::query()->exists();
+
+                        return [
+                            'empty' => 'En blanco',
+                            ...($hasHooks ? [
+                                'full' => 'Con todos los hooks',
+                                'random_hooks' => 'Empezar con hooks al azar',
+                                'group_hooks' => 'Cargar grupo',
+                            ] : []),
+                        ];
+                    })
                     ->default('empty')
                     ->required()
                     ->live(),
 
                 TextInput::make('random_hooks_count')
                     ->label('Empezar con')
-                    ->helperText('Después podrás seguir sacando hooks de la bolsa.')
                     ->suffix('hooks al azar')
                     ->numeric()
                     ->minValue(1)
-                    ->default(34)
+                    ->maxValue(fn () => Hook::query()->count())
+                    ->default(fn () => min(34, Hook::query()->count()))
+                    ->disabled(fn () => Hook::query()->count() === 0)
+                    ->live()
+                    ->helperText(function ($get) {
+                        $totalHooks = Hook::query()->count();
+                        $count = (int) ($get('random_hooks_count') ?? 0);
+
+                        if ($totalHooks === 0) {
+                            return 'No hay hooks disponibles todavía.';
+                        }
+
+                        if ($count >= $totalHooks) {
+                            return 'Se usarán todos tus hooks.';
+                        }
+
+                        $remaining = $totalHooks - $count;
+
+                        return "{$remaining} hooks quedarán en la bolsa.";
+                    })
                     ->visible(fn ($get) => $get('start_mode') === 'random_hooks')
                     ->required(fn ($get) => $get('start_mode') === 'random_hooks'),
 
@@ -93,9 +117,16 @@ class CyclesManager extends Page implements HasActions
                     $selectedHookIds = [];
 
                     if ($data['start_mode'] === 'random_hooks') {
+                        $totalHooks = Hook::query()->count();
+
+                        $count = min(
+                            (int) ($data['random_hooks_count'] ?? 1),
+                            $totalHooks,
+                        );
+
                         $selectedHookIds = Hook::query()
                             ->inRandomOrder()
-                            ->limit((int) $data['random_hooks_count'])
+                            ->limit($count)
                             ->pluck('id')
                             ->all();
                     }
@@ -226,5 +257,25 @@ class CyclesManager extends Page implements HasActions
         return Cycle::withCount(['items', 'bagHooks'])
             ->latest()
             ->get();
+    }
+
+    public function removeCycleAction(): Action
+    {
+        return Action::make('removeCycle')
+            ->label('Eliminar baraja')
+            ->icon('heroicon-o-trash')
+            ->color('danger')
+            ->requiresConfirmation()
+            ->modalHeading('Eliminar baraja')
+            ->modalDescription('Esto eliminará la baraja, sus cartas y su bolsa. Esta acción no se puede deshacer.')
+            ->modalSubmitActionLabel('Eliminar')
+            ->modalCancelActionLabel('Cancelar')
+            ->action(function (array $arguments): void {
+                $cycle = Cycle::query()->findOrFail((int) $arguments['cycle_id']);
+
+                $cycle->delete();
+
+                $this->dispatch('$refresh');
+            });
     }
 }

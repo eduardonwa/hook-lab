@@ -73,6 +73,7 @@ class CycleBoard extends Page implements HasActions
     {
         return Action::make('editItem')
             ->label('Editar combo')
+            ->size('sm')
             ->icon('heroicon-o-adjustments-horizontal')
             ->modalWidth(Width::Large)
             ->modalHeading('Editar combinación')
@@ -215,6 +216,7 @@ class CycleBoard extends Page implements HasActions
         return Action::make('editIdea')
             ->label('Editar idea')
             ->icon('heroicon-o-pencil-square')
+            ->size('sm')
             ->modalHeading('Editar idea')
             ->modalSubmitActionLabel('Guardar cambios')
             ->modalCancelActionLabel('Cancelar')
@@ -390,6 +392,7 @@ class CycleBoard extends Page implements HasActions
         return Action::make('removeItem')
             ->label('Quitar carta')
             ->icon('heroicon-o-trash')
+            ->size('sm')
             ->color('danger')
             ->requiresConfirmation()
             ->modalHeading('Quitar carta de la baraja')

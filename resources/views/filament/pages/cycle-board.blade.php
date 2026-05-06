@@ -46,47 +46,100 @@
                     Bolsa vacía
                 </span>
             @endif
+
         </section>
 
         @if ($viewMode === 'cards')
-            <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-auto">
                 @forelse ($this->items as $item)
-                    <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-gray-900">
-                        <div class="space-y-4">
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                        Carta #{{ $item->position }}
-                                    </p>
+                    <article class="grid row-span-4 grid-rows-subgrid gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-gray-900 min-h-0">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                    Carta #{{ $item->position }}
+                                </p>
 
-                                    <h3 class="mt-1 text-base font-bold text-gray-950 dark:text-white">
-                                        {{ $item->hook?->name ?? '-' }}
-                                    </h3>
-                                </div>
+                                <h3 class="mt-1 text-base font-bold text-gray-950 dark:text-white">
+                                    {{ $item->hook?->name ?? '-' }}
+                                </h3>
                             </div>
+                        </div>
 
-                            <p class="text-sm leading-6 text-gray-500 dark:text-gray-400">
-                                {{ $item->hook?->description ?? 'Sin descripción.' }}
+                        <div class="max-h-[250px] overflow-y-auto pr-1">
+                            <p class="whitespace-pre-line mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">{{ trim($item->hook?->description ?? 'Sin descripción.') }}</p>
+                        </div>
+
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-white/10 dark:bg-gray-950">
+                            <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                Idea
                             </p>
 
-                            <div class="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-white/10 dark:bg-gray-950">
-                                <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                    Idea
-                                </p>
+                            <p class="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                {{ Str::limit($item->idea?->title ?? 'Sin idea asignada', 24) }}
+                            </p>
+                        </div>
 
-                                <p class="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">
-                                    {{ $item->idea?->title ?? 'Sin idea asignada' }}
-                                </p>
-                            </div>
-
-                            <div class="flex flex-wrap gap-2 pt-1">
-                                {{ ($this->editItemAction)(['item_id' => $item->id]) }}
-
+                        {{-- CARD ACIONS --}}
+                        <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                            {{-- Mobile --}}
+                            <div class="flex flex-col gap-2 sm:hidden">
                                 @if ($item->idea_id)
-                                    {{ ($this->editIdeaAction)(['item_id' => $item->id]) }}
+                                    <x-filament::button
+                                        color="gray"
+                                        icon="heroicon-o-pencil-square"
+                                        class="w-full justify-center"
+                                        wire:click="mountAction('editIdea', { item_id: {{ $item->id }} })"
+                                    >
+                                        Editar idea
+                                    </x-filament::button>
                                 @endif
 
-                                {{ ($this->removeItemAction)(['item_id' => $item->id]) }}
+                                <x-filament::button
+                                    color="primary"
+                                    icon="heroicon-o-adjustments-horizontal"
+                                    class="w-full justify-center"
+                                    wire:click="mountAction('editItem', { item_id: {{ $item->id }} })"
+                                >
+                                    Editar combo
+                                </x-filament::button>
+                            
+                                <x-filament::button
+                                    color="danger"
+                                    icon="heroicon-o-trash"
+                                    class="w-full justify-center"
+                                    wire:click="mountAction('removeItem', { item_id: {{ $item->id }} })"
+                                >
+                                    Quitar carta
+                                </x-filament::button>
+                            </div>
+
+                            {{-- Desktop --}}
+                            <div class="hidden gap-2 sm:flex">
+                                @if ($item->idea_id)
+                                    <x-filament::icon-button
+                                        icon="heroicon-o-pencil-square"
+                                        color="gray"
+                                        size="sm"
+                                        tooltip="Editar idea"
+                                        wire:click="mountAction('editIdea', { item_id: {{ $item->id }} })"
+                                    />
+                                @endif
+
+                                <x-filament::icon-button
+                                    icon="heroicon-o-adjustments-horizontal"
+                                    color="primary"
+                                    size="sm"
+                                    tooltip="Editar combo"
+                                    wire:click="mountAction('editItem', { item_id: {{ $item->id }} })"
+                                />
+
+                                <x-filament::icon-button
+                                    icon="heroicon-o-trash"
+                                    color="danger"
+                                    size="sm"
+                                    tooltip="Quitar carta"
+                                    wire:click="mountAction('removeItem', { item_id: {{ $item->id }} })"
+                                />
                             </div>
                         </div>
                     </article>
@@ -140,15 +193,34 @@
                                             {{ $item->idea?->title ?? '-' }}
                                         </td>
 
+                                        {{-- CARD ACTIONS --}}
                                         <td class="w-40 p-3">
                                             <div class="flex justify-end gap-2">
-                                                {{ ($this->editItemAction)(['item_id' => $item->id]) }}
-
                                                 @if ($item->idea_id)
-                                                    {{ ($this->editIdeaAction)(['item_id' => $item->id]) }}
+                                                    <x-filament::icon-button
+                                                        icon="heroicon-o-pencil-square"
+                                                        color="gray"
+                                                        size="sm"
+                                                        tooltip="Editar idea"
+                                                        wire:click="mountAction('editIdea', { item_id: {{ $item->id }} })"
+                                                    />
                                                 @endif
 
-                                                {{ ($this->removeItemAction)(['item_id' => $item->id]) }}
+                                                <x-filament::icon-button
+                                                    icon="heroicon-o-adjustments-horizontal"
+                                                    color="primary"
+                                                    size="sm"
+                                                    tooltip="Editar combo"
+                                                    wire:click="mountAction('editItem', { item_id: {{ $item->id }} })"
+                                                />
+
+                                                <x-filament::icon-button
+                                                    icon="heroicon-o-trash"
+                                                    color="danger"
+                                                    size="sm"
+                                                    tooltip="Quitar carta"
+                                                    wire:click="mountAction('removeItem', { item_id: {{ $item->id }} })"
+                                                />
                                             </div>
                                         </td>
                                     </tr>

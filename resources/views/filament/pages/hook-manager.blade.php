@@ -28,7 +28,7 @@
             <p class="text-sm text-gray-500">
                 Pre-selecciona hooks y utilízalos en tu
                 <a
-                    {{-- href="{{ \App\Filament\Resources\Cycles\CycleResource::getUrl() }}" --}}
+                    href="{{ \App\Filament\Pages\CyclesManager::getUrl() }}"
                     class="font-medium text-primary-600 hover:text-primary-500"
                 >
                     próxima baraja
@@ -205,7 +205,7 @@
             <p class="text-sm text-gray-500">
                 Esta es tu librería de hooks. Aparecerán en todas tus
                 <a
-                    {{-- href="{{ \App\Filament\Resources\Cycles\CycleResource::getUrl() }}" --}}
+                    href="{{ \App\Filament\Pages\CyclesManager::getUrl() }}"
                     class="font-medium text-primary-600 hover:text-primary-500"
                 >
                     barajas
