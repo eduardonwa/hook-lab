@@ -67,12 +67,23 @@
                     </div>
 
                     @if ($decks->isNotEmpty())
-                        <a
-                            href="{{ route('filament.admin.pages.cycles-manager') }}"
-                            class="text-sm font-medium text-primary-600 hover:text-primary-500"
-                        >
-                            + Nueva
-                        </a>
+                        @if (app(\App\Services\PlanLimitService::class)->canCreateDeck(auth()->user()))
+                            <a
+                                href="{{ route('filament.admin.pages.cycles-manager') }}"
+                                class="text-sm font-medium text-primary-600 hover:text-primary-500"
+                            >
+                                + Nueva
+                            </a>
+                        @else
+                            <div class="flex justify-center">
+                                <span
+                                    wire:click="mountAction('subscribe')"
+                                    class="cursor-pointer text-sm font-medium text-primary-600 hover:text-primary-500"
+                                >
+                                    ¿Necesitas más?
+                                </span>
+                            </div>
+                        @endif
                     @endif
                 </div>
 
@@ -105,7 +116,7 @@
                                 </p>
 
                                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                    {{ $deck->cycle_items_count ?? 0 }} items
+                                    {{ $deck->items_count ?? 0 }} cartas
                                 </p>
                             </a>
                         @endforeach

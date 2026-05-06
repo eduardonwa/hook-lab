@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('hooks', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            
             $table->string('name')->unique();
             $table->string('slug')->unique();
             $table->text('description')->nullable();

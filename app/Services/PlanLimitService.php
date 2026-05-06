@@ -47,7 +47,7 @@ class PlanLimitService
             return true;
         }
 
-        return $user->groups()->count() < $limit;
+        return $user->hookGroups()->count() < $limit;
     }
 
     public function canCreateCustomHook(User $user): bool

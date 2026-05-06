@@ -5,20 +5,28 @@ namespace App\Filament\Pages;
 use App\Filament\Schemas\HookForm;
 use App\Models\Hook;
 use App\Models\HookGroup;
+use App\Services\PlanLimitService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Grid;
+use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class HookManager extends Page implements HasTable
@@ -39,6 +47,34 @@ class HookManager extends Page implements HasTable
     public ?int $selectedGroupId = null;
     public ?int $expandedHookId = null;
 
+    protected function planLimits(): PlanLimitService
+    {
+        return app(PlanLimitService::class);
+    }
+
+    protected function availableHooksQuery(): Builder
+    {
+        $user = Auth::user();
+
+        return Hook::query()
+            ->where(function (Builder $query) use ($user) {
+                // Hooks personalizados del usuario
+                $query->where('user_id', $user->id)
+
+                    // Hooks base según plan
+                    ->orWhere(function (Builder $query) use ($user) {
+                        $query->whereNull('user_id')
+                            ->where('access_level', $user->isPro() ? 'pro' : 'free');
+                    });
+            });
+    }
+
+    protected function userHookGroupsQuery(): Builder
+    {
+        return HookGroup::query()
+            ->where('user_id', Auth::id());
+    }
+
     public function setActiveTab(string $tab): void
     {
         $this->activeTab = $tab;
@@ -47,7 +83,9 @@ class HookManager extends Page implements HasTable
 
     public function mount(): void
     {
-        $this->selectedGroupId = HookGroup::query()->oldest()->value('id');
+        $this->selectedGroupId = $this->userHookGroupsQuery()
+            ->oldest()
+            ->value('id');
     }
 
     public function selectGroup(int $groupId): void
@@ -66,7 +104,7 @@ class HookManager extends Page implements HasTable
     
     public function getHookGroupsProperty(): Collection
     {
-        return HookGroup::query()
+        return $this->userHookGroupsQuery()
             ->withCount('hooks')
             ->orderBy('created_at', $this->groupSortDirection)
             ->get();
@@ -78,8 +116,10 @@ class HookManager extends Page implements HasTable
             return null;
         }
 
-        return HookGroup::query()
-            ->with('hooks')
+        return $this->userHookGroupsQuery()
+            ->with([
+                'hooks' => fn ($query) => $query->orderByPivot('sort_order'),
+            ])
             ->find($this->selectedGroupId);
     }
 
@@ -154,7 +194,7 @@ class HookManager extends Page implements HasTable
                     ->searchable()
                     ->preload()
                     ->options(function () {
-                        return Hook::query()
+                        return $this->availableHooksQuery()
                             ->latest()
                             ->get()
                             ->mapWithKeys(function (Hook $hook) {
@@ -173,7 +213,7 @@ class HookManager extends Page implements HasTable
                     return;
                 }
 
-                $group = HookGroup::query()->find($this->selectedGroupId);
+                $group = $this->userHookGroupsQuery()->find($this->selectedGroupId);
 
                 if (! $group) {
                     return;
@@ -186,7 +226,10 @@ class HookManager extends Page implements HasTable
                         'description' => $data['description'] ?? null,
                     ]);
 
-                $hookIds = $data['hook_ids'] ?? [];
+                $hookIds = $this->availableHooksQuery()
+                    ->whereIn('id', $data['hook_ids'] ?? [])
+                    ->pluck('id')
+                    ->toArray();
 
                 $syncData = collect($hookIds)
                     ->values()
@@ -210,9 +253,24 @@ class HookManager extends Page implements HasTable
             return;
         }
 
+        $group = $this->userHookGroupsQuery()->find($this->selectedGroupId);
+
+        if (! $group) {
+            return;
+        }
+
+        $allowedHookIds = $this->availableHooksQuery()
+            ->whereIn('id', $orderedHookIds)
+            ->pluck('id')
+            ->toArray();
+
         foreach ($orderedHookIds as $index => $hookId) {
+            if (! in_array($hookId, $allowedHookIds)) {
+                continue;
+            }
+
             DB::table('hook_hook_group')
-                ->where('hook_group_id', $this->selectedGroupId)
+                ->where('hook_group_id', $group->id)
                 ->where('hook_id', $hookId)
                 ->update([
                     'sort_order' => $index + 1,
@@ -238,7 +296,7 @@ class HookManager extends Page implements HasTable
                     return;
                 }
 
-                $group = HookGroup::query()->find($this->selectedGroupId);
+                $group = $this->userHookGroupsQuery()->find($this->selectedGroupId);
 
                 if (! $group) {
                     return;
@@ -248,7 +306,7 @@ class HookManager extends Page implements HasTable
                     ->whereKey($group->id)
                     ->delete();
 
-                $this->selectedGroupId = HookGroup::query()
+                $this->selectedGroupId = $this->userHookGroupsQuery()
                     ->latest()
                     ->value('id');
 
@@ -262,11 +320,14 @@ class HookManager extends Page implements HasTable
     public function table(Table $table): Table
     {
         return $table
-            ->query(Hook::query())
+            ->query($this->availableHooksQuery())
             ->columns([
                 TextColumn::make('name')
                     ->label('Nombre')
                     ->searchable(),
+                TextColumn::make('access_level')
+                    ->label('Plan')
+                    ->badge(),
                 TextColumn::make('created_at')
                     ->label('Fecha creación')
                     ->dateTime()
@@ -278,15 +339,41 @@ class HookManager extends Page implements HasTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->recordAction('edit')
+            ->recordAction('view')
             ->recordActions([
+                ViewAction::make()
+                    ->modalHeading('Ver hook')
+                    ->modalWidth(Width::Medium)
+                    ->schema([
+                        TextEntry::make('access_level')
+                            ->label('Plan')
+                            ->badge(),
+                        Grid::make(2)
+                            ->schema([
+                                TextEntry::make('name')
+                                    ->color('gray')
+                                    ->label('Nombre'),
+                                TextEntry::make('description')
+                                    ->label('Descripción')
+                                    ->color('gray')
+                                    ->columnSpanFull()
+                            ])
+                    ]),
                 EditAction::make()
                     ->modalHeading('Editar hook')
-                    ->schema(HookForm::getFormSchema()),
+                    ->schema(HookForm::getFormSchema())
+                    ->visible(fn (Hook $record): bool => $record->user_id === Auth::id()),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->visible(fn (): bool => true)
+                        ->action(function ($records): void {
+                            $records
+                                ->where('user_id', Auth::id())
+                                ->each
+                                ->delete();
+                        }),
                 ]),
             ]);
     }
@@ -309,6 +396,24 @@ class HookManager extends Page implements HasTable
                         ->columnSpanFull(),
                 ])
                 ->visible(fn (): bool => $this->activeTab === 'groups')
+                ->before(function (CreateAction $action): void {
+                    $user = Auth::user();
+
+                    if (! $this->planLimits()->canCreateGroup($user)) {
+                        Notification::make()
+                            ->title('Llegaste al límite de grupos')
+                            ->body('Tu plan Free permite crear 1 grupo de hooks.')
+                            ->danger()
+                            ->send();
+
+                        $action->cancel();
+                    }
+                })
+                ->mutateDataUsing(function (array $data): array {
+                    $data['user_id'] = Auth::id();
+
+                    return $data;
+                })
                 ->after(function (HookGroup $record): void {
                     $this->selectedGroupId = $record->id;
 
@@ -322,6 +427,25 @@ class HookManager extends Page implements HasTable
                 ->model(Hook::class)
                 ->schema(HookForm::getFormSchema())
                 ->visible(fn (): bool => $this->activeTab === 'library')
+                ->before(function (CreateAction $action): void {
+                    $user = Auth::user();
+
+                    if (! $this->planLimits()->canCreateCustomHook($user)) {
+                        Notification::make()
+                            ->title('Llegaste al límite de hooks personalizados')
+                            ->body('Tu plan Free permite crear hasta 10 hooks personalizados.')
+                            ->danger()
+                            ->send();
+
+                        $action->cancel();
+                    }
+                })
+                ->mutateFormDataUsing(function (array $data): array {
+                    $data['user_id'] = Auth::id();
+                    $data['access_level'] = 'custom';
+
+                    return $data;
+                })
                 ->after(function (): void {
                     $this->resetTable();
                 }),
