@@ -7,6 +7,7 @@ use App\Models\CycleItem;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\Width;
@@ -65,7 +66,17 @@ class Dashboard extends Page
             '))
             ->modalSubmitActionLabel('Ver planes')
             ->action(function (): void {
-                // $this->redirect(route('filament.admin.pages.billing'));
+                if (! config('services.stripe.billing_enabled')) {
+                    Notification::make()
+                        ->title('Pro muy pronto')
+                        ->body('El plan Pro aún no está activado. Sigue usando Hook Labs en modo Free')
+                        ->info()
+                        ->send();
+                    
+                    return;
+                }
+
+                // Conectar checkout después
             });
     }
 }

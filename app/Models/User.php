@@ -82,6 +82,14 @@ class User extends Authenticatable implements FilamentUser
 
     public function isPro(): bool
     {
+        if (app()->environment('local') && config('services.stripe.force_pro_users')) {
+            return true;
+        }
+
+        if (! config('services.stripe.billing_enabled')) {
+            return false;
+        }
+        
         return $this->subscribed('default');
     }
 

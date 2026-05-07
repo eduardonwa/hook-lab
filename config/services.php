@@ -35,4 +35,17 @@ return [
         ],
     ],
 
+    'stripe' => [
+        'billing_enabled' => env('BILLING_ENABLED', false),
+        'force_pro_users' => env('FORCE_PRO_USERS'),
+        'key' => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
+
+        'webhook' => [
+            'secret' => env('STRIPE_WEBHOOK_SECRET')
+        ],
+
+        'pro_price_id' => env('STRIPE_PRO_PRICE_ID')
+    ],
+
 ];
