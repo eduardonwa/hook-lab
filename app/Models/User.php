@@ -6,10 +6,12 @@ namespace App\Models;
 
 use App\Models\Cycle;
 use App\Models\Hook;
+use App\Models\HookGeneratorState;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Cashier\Billable;
@@ -66,6 +68,11 @@ class User extends Authenticatable implements FilamentUser
     public function cycles(): HasMany
     {
         return $this->hasMany(Cycle::class);
+    }
+
+    public function hookGeneratorState(): HasOne
+    {
+        return $this->hasOne(HookGeneratorState::class);
     }
 
     public function canAccessPanel(Panel $panel):bool

@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Hook;
+use App\Models\HookGeneratorState;
 use App\Services\PlanLimitService;
 use Filament\Notifications\Notification;
 use Filament\Widgets\Widget;
@@ -16,6 +17,11 @@ class QuickHookGenerator extends Widget
 
     public array $recentHookIds = [];
 
+    public function mount(): void
+    {
+        $this->loadLastHookGeneratorState();
+    }
+
     public function generateHook(): void
     {
         $user = Auth::user();
@@ -24,6 +30,8 @@ class QuickHookGenerator extends Widget
         $limits = app(PlanLimitService::class);
 
         if (! $limits->canUseQuickHookGenerator($user)) {
+            $this->loadLastHookGeneratorState();
+
             Notification::make()
                 ->title('Límite diario alcanzado')
                 ->body('El plan gratis permite 7 generaciones por día.')
@@ -33,11 +41,9 @@ class QuickHookGenerator extends Widget
             return;
         }
 
-        $query = Hook::query();
-
-        if (! $user->isPro()) {
-            $query->where('access_level', 'free');
-        }
+        $query = Hook::query()
+            ->whereNull('user_id')
+            ->where('access_level', $user->isPro() ? 'pro' : 'free');
 
         if (! empty($this->recentHookIds)) {
             $query->whereNotIn('id', $this->recentHookIds);
@@ -50,11 +56,9 @@ class QuickHookGenerator extends Widget
         if (! $hookId) {
             $this->recentHookIds = [];
 
-            $query = Hook::query();
-
-            if (! $user->isPro()) {
-                $query->where('access_level', 'free');
-            }
+            $query = Hook::query()
+                ->whereNull('user_id')
+                ->where('access_level', $user->isPro() ? 'pro' : 'free');
 
             $hookId = $query
                 ->inRandomOrder()
@@ -73,6 +77,8 @@ class QuickHookGenerator extends Widget
 
         $this->selectedHookId = $hookId;
 
+        $this->storeLastHookGeneratorState($hookId);
+
         $this->recentHookIds[] = $hookId;
 
         $this->recentHookIds = array_slice($this->recentHookIds, -7);
@@ -87,5 +93,62 @@ class QuickHookGenerator extends Widget
         }
 
         return Hook::query()->find($this->selectedHookId);
+    }
+
+    protected function storeLastHookGeneratorState(int $hookId): void
+    {
+        $user = Auth::user();
+
+        if ($user->isPro()) {
+            return;
+        }
+
+        HookGeneratorState::updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'hook_id' => $hookId,
+                'expires_at' => now()->addDay(),
+            ]
+        );
+    }
+
+    protected function loadLastHookGeneratorState(): void
+    {
+        $user = Auth::user();
+
+        if ($user->isPro()) {
+            return;
+        }
+
+        $state = $user
+            ->hookGeneratorState()
+            ->where('expires_at', '>', now())
+            ->first();
+
+        if (! $state) {
+            return;
+        }
+
+        $this->selectedHookId = $state->hook_id;
+    }
+
+    public function getQuickHookUsageLabelProperty(): ?string
+    {
+        $user = Auth::user();
+
+        if ($user->isPro()) {
+            return null;
+        }
+
+        $limit = $user->limits()['max_daily_quick_hooks'] ?? null;
+
+        if ($limit === null) {
+            return null;
+        }
+
+        $remaining = app(PlanLimitService::class)
+            ->quickHookGeneratorUsesRemaining($user);
+
+        return "Te quedan {$remaining} de {$limit} giros hoy";
     }
 }

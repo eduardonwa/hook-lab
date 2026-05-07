@@ -30,13 +30,14 @@ class Dashboard extends Page
     public function getPinnedCycleItems(): Collection
     {
         return CycleItem::query()
+            ->with(['cycle', 'hook', 'idea'])
             ->whereHas('cycle', fn ($query) => $query->where('user_id', Auth::id()))
             ->where('is_pinned', true)
             ->latest('pinned_at')
             ->limit(6)
             ->get();
     }
-
+    
     public function getDecks(): Collection
     {
         return Cycle::query()

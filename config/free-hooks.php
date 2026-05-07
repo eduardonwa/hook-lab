@@ -40,4 +40,14 @@ return [
         'name' => 'What Changed',
         'description' => 'A hook that explains the shift that made an old approach stop working.',
     ],
+
+    [
+        'name' => 'Wrong Focus',
+        'description' => 'A hook that shows how focusing on the wrong thing keeps people stuck.',
+    ],
+
+    [
+        'name' => 'Better Question',
+        'description' => 'A hook that reframes the problem by asking a sharper question.',
+    ],
 ];

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CycleItem;
 use App\Models\UsageEvent;
 use App\Models\User;
 
@@ -65,16 +66,20 @@ class PlanLimitService
     {
         $limit = $this->limit($user, 'max_pinned_items');
 
-        if (is_null($limit)) {
+        if ($limit === null) {
             return true;
         }
 
-        return $user->items()
+        $pinnedCount = CycleItem::query()
+            ->whereHas('cycle', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
             ->where('is_pinned', true)
-            ->count() < $limit;
+            ->count();
+
+        return $pinnedCount < $limit;
     }
 
-    
     public function canUseQuickHookGenerator(User $user): bool
     {
         $limit = $this->limit($user, 'max_daily_quick_hooks');

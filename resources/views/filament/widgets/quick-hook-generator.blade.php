@@ -45,6 +45,18 @@
                     </p>
                 @endif
             </div>
+
+                @if ($this->quickHookUsageLabel)
+                    <p class="text-xs text-gray-400 text-center">
+                        {{ $this->quickHookUsageLabel }}
+                    </p>
+                @endif
+
+            @if (! auth()->user()->isPro() && ! app(\App\Services\PlanLimitService::class)->canUseQuickHookGenerator(auth()->user()))
+                <p class="text-center text-sm text-info-400">
+                    Obtén giros ilimitados con el plan Pro
+                </p>
+            @endif
         </div>
     </div>
 </x-filament-widgets::widget>

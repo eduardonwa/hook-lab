@@ -52,7 +52,26 @@
         @if ($viewMode === 'cards')
             <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-auto">
                 @forelse ($this->items as $item)
-                    <article class="grid row-span-4 grid-rows-subgrid gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-gray-900 min-h-0">
+                    <article class="grid row-span-5 grid-rows-subgrid gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-gray-900 min-h-0">
+                        <div class="flex justify-end">
+                            <button
+                                type="button"
+                                wire:click="togglePinItem({{ $item->id }})"
+                                x-tooltip.raw="{{ $item->is_pinned ? 'Desfijar' : 'Fijar' }}"
+                                aria-label="{{ $item->is_pinned ? 'Desfijar' : 'Fijar' }}"
+                                class="inline-flex items-center rounded-lg p-1.5 text-xs font-medium transition
+                                    {{ $item->is_pinned
+                                        ? 'bg-info-50 text-info-600 dark:bg-info-500/10'
+                                        : 'text-gray-400 hover:text-info-600' }}"
+                            >
+                                @if ($item->is_pinned)
+                                    @svg('heroicon-s-bookmark', 'h-4 w-4')
+                                @else
+                                    @svg('heroicon-o-bookmark', 'h-4 w-4')
+                                @endif
+                            </button>
+                        </div>
+
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
@@ -79,7 +98,7 @@
                             </p>
                         </div>
 
-                        {{-- CARD ACIONS --}}
+                        {{-- CARD ACTIONS --}}
                         <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                             {{-- Mobile --}}
                             <div class="flex flex-col gap-2 sm:hidden">

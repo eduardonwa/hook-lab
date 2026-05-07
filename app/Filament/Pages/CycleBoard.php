@@ -6,6 +6,7 @@ use App\Filament\Pages\CyclesManager;
 use App\Models\Cycle;
 use App\Models\CycleItem;
 use App\Models\Idea;
+use App\Services\PlanLimitService;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
@@ -14,10 +15,12 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class CycleBoard extends Page implements HasActions
@@ -39,6 +42,8 @@ class CycleBoard extends Page implements HasActions
 
     public function mount(Cycle $cycle): void
     {
+        abort_unless($cycle->user_id === Auth::id(), 403);
+
         $this->cycle = $cycle;
 
         $this->refreshCycle();
@@ -433,5 +438,37 @@ class CycleBoard extends Page implements HasActions
                 $this->refreshCycle();
                 $this->dispatch('$refresh');
             });
+    }
+
+    public function togglePinItem(int $itemId): void
+    {
+        $item = CycleItem::query()
+            ->where('cycle_id', $this->cycle->id)
+            ->findOrFail($itemId);
+
+        if (! $item->is_pinned) {
+            $canPin = app(PlanLimitService::class)->canPinMoreItems(Auth::user());
+
+            if (! $canPin) {
+                Notification::make()
+                    ->title('Llegaste al límite de fijados')
+                    ->body('Tu plan Free permite fijar hasta 8 combos.')
+                    ->danger()
+                    ->send();
+
+                return;
+            }
+        }
+
+        $isPinned = ! $item->is_pinned;
+
+        $item->update([
+            'is_pinned' => $isPinned,
+            'pinned_at' => $isPinned ? now() : null,
+        ]);
+
+        $this->refreshCycle();
+
+        $this->dispatch('$refresh');
     }
 }

@@ -6,15 +6,15 @@
 <x-filament-panels::page>
     <div class="mx-auto max-w-5xl space-y-6">
 
-        <section class="rounded-2xl border bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        <section class="rounded-2xl border bg-white border-gray-200 p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
             <div class="mx-auto max-w-2xl">
                 @livewire(\App\Filament\Widgets\QuickHookGenerator::class)
             </div>
         </section>
 
         <div class="grid gap-6 md:grid-cols-2">
-
-            <section class="rounded-2xl border bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            {{-- FAVORITES --}}
+            <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                 <div class="mb-4">
                     <h2 class="text-lg font-semibold">
                         Favoritos
@@ -26,7 +26,7 @@
                 </div>
 
                 @if ($pinnedCycleItems->isEmpty())
-                    <div class="rounded-xl border border-dashed p-6 text-center dark:border-gray-700">
+                    <div class="rounded-xl border border-dashed border-gray-300 p-6 text-center dark:border-gray-700">
                         <p class="text-sm font-medium">
                             No tienes favoritos todavía
                         </p>
@@ -36,25 +36,41 @@
                         </p>
                     </div>
                 @else
-                    <div class="space-y-3">
+                    <div class="space-y-2">
                         @foreach ($pinnedCycleItems as $item)
-                            <article class="rounded-xl border p-4 dark:border-gray-700">
-                                <p class="text-sm font-medium">
-                                    {{ $item->hook }}
+                            <a
+                                href="{{ \App\Filament\Pages\CycleBoard::getUrl(['cycle' => $item->cycle_id]) }}"
+                                class="block rounded-xl border border-gray-200 px-4 py-3 transition hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-white/5"
+                            >
+                                <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                    {{ $item->cycle?->name }}
                                 </p>
 
-                                @if ($item->idea)
-                                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                        {{ $item->idea }}
-                                    </p>
-                                @endif
-                            </article>
+                                <div class="mt-1 overflow-x-auto whitespace-nowrap pb-1 text-sm font-medium text-gray-950 dark:text-white">
+                                    <span>
+                                        {{ $item->hook?->name ?? 'Sin hook' }}
+                                    </span>
+
+                                    <span class="text-gray-400">+</span>
+
+                                    @if ($item->idea)
+                                        <span>
+                                            {{ $item->idea->title }}
+                                        </span>
+                                    @else
+                                        <span class="text-gray-500 dark:text-gray-400">
+                                            Sin idea asignada
+                                        </span>
+                                    @endif
+                                </div>
+                            </a>
                         @endforeach
                     </div>
                 @endif
             </section>
 
-            <section class="rounded-2xl border bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            {{-- DECKS --}}
+            <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                 <div class="mb-4 flex items-center justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-semibold">
@@ -108,8 +124,8 @@
                     <div class="space-y-3">
                         @foreach ($decks as $deck)
                             <a
-                                href="{{ route('filament.admin.pages.cycles-manager') }}"
-                                class="block rounded-xl border p-4 transition hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                                href="{{ \App\Filament\Pages\CycleBoard::getUrl(['cycle' => $deck->id]) }}"
+                                class="block rounded-xl border p-4 border-gray-300 transition hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
                             >
                                 <p class="text-sm font-medium">
                                     {{ $deck->name }}
@@ -123,7 +139,6 @@
                     </div>
                 @endif
             </section>
-
         </div>
     </div>
 </x-filament-panels::page>

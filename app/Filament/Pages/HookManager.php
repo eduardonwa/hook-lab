@@ -327,7 +327,13 @@ class HookManager extends Page implements HasTable
                     ->searchable(),
                 TextColumn::make('access_level')
                     ->label('Plan')
-                    ->badge(),
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'free' => 'Free',
+                        'pro' => 'Pro',
+                        'custom' => 'Custom',
+                        default => ucfirst((string) $state),
+                    }),
                 TextColumn::make('created_at')
                     ->label('Fecha creación')
                     ->dateTime()
@@ -440,7 +446,7 @@ class HookManager extends Page implements HasTable
                         $action->cancel();
                     }
                 })
-                ->mutateFormDataUsing(function (array $data): array {
+                ->mutateDataUsing(function (array $data): array {
                     $data['user_id'] = Auth::id();
                     $data['access_level'] = 'custom';
 
