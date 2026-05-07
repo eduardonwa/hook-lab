@@ -471,4 +471,34 @@ class CycleBoard extends Page implements HasActions
 
         $this->dispatch('$refresh');
     }
+
+    public function bringCardToTable(int $itemId): void
+    {
+        $item = $this->cycle
+            ->items()
+            ->whereKey($itemId)
+            ->firstOrFail();
+
+        $item->update([
+            'board_state' => 'table'
+        ]);
+
+        $this->refreshCycle();
+        $this->dispatch('$refresh');
+    }
+
+    public function sendCardToDeck(int $itemId): void
+    {
+        $item = $this->cycle
+            ->items()
+            ->whereKey($itemId)
+            ->firstOrFail();
+        
+        $item->update([
+            'board_state' => 'deck'
+        ]);
+
+        $this->refreshCycle();
+        $this->dispatch('$refresh');
+    }
 }

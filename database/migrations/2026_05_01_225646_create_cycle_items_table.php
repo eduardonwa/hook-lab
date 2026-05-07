@@ -19,6 +19,7 @@ return new class extends Migration
             $table->boolean('is_pinned')->default(false);
             $table->timestamp('pinned_at')->nullable();
             $table->unsignedInteger('position');
+            $table->string('board_state')->default('deck');
             $table->timestamps();
 
             $table->unique(['cycle_id', 'position']);

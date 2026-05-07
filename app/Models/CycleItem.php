@@ -11,6 +11,9 @@ use Illuminate\Validation\ValidationException;
 
 class CycleItem extends Model
 {
+    public const BOARD_STATE_DECK = 'deck';
+    public const BOARD_STATE_TABLE = 'table';
+    
     protected $casts = [
         'is_pinned' => 'boolean',
         'pinned_at' => 'datetime'
@@ -44,5 +47,15 @@ class CycleItem extends Model
     public function idea(): BelongsTo
     {
         return $this->belongsTo(Idea::class);
+    }
+
+    public function isInDeck(): bool
+    {
+        return $this->board_state === self::BOARD_STATE_DECK;
+    }
+
+    public function isOnTable(): bool
+    {
+        return $this->board_state === self::BOARD_STATE_TABLE;
     }
 }
