@@ -20,7 +20,7 @@
                     class="!bg-transparent !text-info-50 !shadow-none !ring-1 !ring-info-600 hover:!bg-info-600"
                 >
                     <span class="inline-flex gap-1" wire:loading.remove wire:target="generateHook">
-                        @svg('icon-deck-icon', 'w-5 h-5') Girar
+                        @svg('icon-spin-icon', 'w-5 h-5') Girar
                     </span>
 
                     <span wire:loading wire:target="generateHook">
