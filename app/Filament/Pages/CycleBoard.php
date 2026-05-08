@@ -24,7 +24,6 @@ use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
-use Illuminate\Support\Str;
 
 class CycleBoard extends Page implements HasActions
 {
@@ -160,6 +159,7 @@ class CycleBoard extends Page implements HasActions
                             ->findOrFail($this->editingItemId);
 
                         return Idea::query()
+                            ->where('user_id', Auth::id())
                             ->where('hook_id', $item->hook_id)
                             ->orderBy('title')
                             ->pluck('title', 'id')
@@ -197,6 +197,18 @@ class CycleBoard extends Page implements HasActions
                             return null;
                         }
 
+                        $user = Auth::user();
+
+                        if (! app(PlanLimitService::class)->canCreateIdea($user)) {
+                            Notification::make()
+                                ->title('Límite de ideas alcanzado')
+                                ->body('Tu plan actual permite crear hasta 10 ideas')
+                                ->warning()
+                                ->send();
+
+                            return null;
+                        }
+
                         $item = CycleItem::query()
                             ->where('cycle_id', $this->cycle->id)
                             ->findOrFail($this->editingItemId);
@@ -205,6 +217,7 @@ class CycleBoard extends Page implements HasActions
                             'title' => $data['title'],
                             'description' => $data['description'] ?? null,
                             'hook_id' => $item->hook_id,
+                            'user_id' => Auth::id()
                         ])->id;
                     })
                     ->extraAttributes([

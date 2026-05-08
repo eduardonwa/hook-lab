@@ -7,7 +7,8 @@ return [
         'max_groups' => 2,
         'max_daily_quick_hooks' => 7,
         'max_pinned_items' => 8,
-        'max_custom_hooks' => 10
+        'max_custom_hooks' => 10,
+        'max_ideas' => 20
     ],
 
     'pro' => [
@@ -16,6 +17,7 @@ return [
         'max_groups' => null,
         'max_daily_quick_hooks' => null,
         'max_pinned_items' => null,
-        'max_custom_hooks' => null
+        'max_custom_hooks' => null,
+        'max_ideas' => null
     ]
 ];

@@ -121,4 +121,26 @@ class PlanLimitService
 
         return max(0, $limit - $usedToday);
     }
+
+    public function canCreateIdea(User $user): bool
+    {
+        $limit = $this->limit($user, 'max_ideas');
+
+        if (is_null($limit)) {
+            return true;
+        }
+
+        return $user->ideas()->count() < $limit;
+    }
+
+    public function ideasRemaining(User $user): ?int
+    {
+        $limit = $this->limit($user, 'max_ideas');
+
+        if (is_null($limit)) {
+            return null;
+        }
+
+        return max(0, $limit - $user->ideas()->count());
+    }
 }

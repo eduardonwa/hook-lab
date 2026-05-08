@@ -8,6 +8,7 @@ use App\Models\Cycle;
 use App\Models\Hook;
 use App\Models\HookGeneratorState;
 use App\Models\HookGroup;
+use App\Models\Idea;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -74,6 +75,11 @@ class User extends Authenticatable implements FilamentUser
     public function hookGeneratorState(): HasOne
     {
         return $this->hasOne(HookGeneratorState::class);
+    }
+
+    public function ideas(): HasMany
+    {
+        return $this->hasMany(Idea::class);
     }
 
     public function canAccessPanel(Panel $panel):bool
