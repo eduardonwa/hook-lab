@@ -149,14 +149,15 @@ class HookManager extends Page implements HasTable
                 $group = $this->selectedGroup;
 
                 if (! $group) {
-                    return 'primary';
+                    return 'gray';
                 }
 
                 return $group->hooks()->exists()
                     ? 'gray'
-                    : 'primary';
+                    : 'gray';
             })
             ->icon('heroicon-o-pencil')
+            ->link()
             ->modalHeading(function (): string {
                 $group = $this->selectedGroup;
 
@@ -287,6 +288,7 @@ class HookManager extends Page implements HasTable
             ->label('Borrar grupo')
             ->icon('heroicon-o-trash')
             ->color('danger')
+            ->link()
             ->requiresConfirmation()
             ->modalHeading('Borrar grupo de hooks')
             ->modalDescription('Esto solo borrará el grupo. Tus hooks seguirán existiendo.')
