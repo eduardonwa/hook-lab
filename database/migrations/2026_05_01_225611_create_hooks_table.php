@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->text('description')->nullable();
             $table->string('access_level')->default('pro')->index();
+            $table->string('key')->nullable()->unique();
             $table->timestamps();
         });
     }

@@ -16,9 +16,10 @@ class FreeHookSeeder extends Seeder
         foreach (config('free-hooks') as $hook) {
             Hook::updateOrCreate(
                 [
-                    'slug' => Str::slug($hook['name']),
+                    'key' => $hook['key'],
                 ],
                 [
+                    'slug' => Str::slug($hook['name']),
                     'name' => $hook['name'],
                     'description' => str_replace('\n', "\n", trim($hook['description'])),
                     'access_level' => 'free'
