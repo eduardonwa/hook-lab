@@ -25,7 +25,7 @@ class CyclesManager extends Page implements HasActions
 
     protected string $view = 'filament.pages.cycles-manager';
 
-    protected static string | \BackedEnum | null $navigationIcon = 'icon-hook-icon';
+    protected static string | \BackedEnum | null $navigationIcon = 'icon-deck-icon';
 
     protected static string | \UnitEnum | null $navigationGroup = 'Colección';
 
@@ -39,7 +39,7 @@ class CyclesManager extends Page implements HasActions
     {
         return Action::make('createCycle')
             ->label('Nueva baraja')
-            ->icon('heroicon-o-rectangle-stack')
+            ->icon('heroicon-o-plus')
             ->color('primary')
             ->modalWidth(Width::Medium)
             ->modalHeading('')
