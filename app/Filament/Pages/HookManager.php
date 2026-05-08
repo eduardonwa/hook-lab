@@ -347,7 +347,7 @@ class HookManager extends Page implements HasTable
                     }),
                 TextColumn::make('type')
                     ->label('Tipo')
-                    ->state(fn (Hook $record): string => $record->user_id ? 'Custom' : 'Lab')
+                    ->state(fn (Hook $record): string => $record->user_id ? 'Creado' : 'Lab')
                     ->badge()
                     ->color(fn (Hook $record): string => $record->user_id ? 'gray' : 'info'),
                 TextColumn::make('created_at')
