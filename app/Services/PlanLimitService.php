@@ -31,7 +31,7 @@ class PlanLimitService
 
     public function canCreateCycleItemInDeck(User $user, $cycle): bool
     {
-        $limit = $this->limit($user, 'max_ideas_per_deck');
+        $limit = $this->limit($user, 'max_combos_per_deck');
 
         if (is_null($limit)) {
             return true;

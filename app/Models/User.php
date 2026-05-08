@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Models\Cycle;
 use App\Models\Hook;
 use App\Models\HookGeneratorState;
+use App\Models\HookGroup;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -62,7 +63,7 @@ class User extends Authenticatable implements FilamentUser
 
     public function hookGroups(): HasMany
     {
-        return $this->hasMany(Hook::class);
+        return $this->hasMany(HookGroup::class);
     }
 
     public function cycles(): HasMany

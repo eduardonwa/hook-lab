@@ -120,8 +120,8 @@
                             </div>
                             
                             {{-- HOOK DESCRIPTION --}}
-                            <div>
-                                <div class="text-base font-bold text-gray-950 dark:text-white flex items-center">
+                            <div class="min-h-0 flex-1 overflow-y-auto pr-1">
+                                <div class="sticky top-0 z-10 bg-white pb-2 text-base font-bold text-gray-950 dark:bg-gray-900 dark:text-white flex items-center">
                                     <span class="mr-1 text-sm font-medium text-gray-400 dark:text-gray-500">
                                         #{{ $item->position }}
                                     </span>
@@ -137,7 +137,7 @@
                             </div>
 
                             {{-- IDEA --}}
-                            <div class="mt-auto rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-white/10 dark:bg-gray-950">
+                            <div class="shrink-0 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-white/10 dark:bg-gray-950">
                                 <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                     Idea
                                 </p>

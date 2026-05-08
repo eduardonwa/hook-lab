@@ -28,6 +28,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class HookManager extends Page implements HasTable
 {
@@ -327,13 +328,28 @@ class HookManager extends Page implements HasTable
                     ->searchable(),
                 TextColumn::make('access_level')
                     ->label('Plan')
+                    ->state(function (Hook $record): string {
+                        if ($record->user_id) {
+                            return '—';
+                        }
+
+                        return match ($record->access_level) {
+                            'free' => 'Free',
+                            'pro' => 'Pro',
+                            default => ucfirst($record->access_level),
+                        };
+                    })
                     ->badge()
-                    ->formatStateUsing(fn (?string $state): string => match ($state) {
-                        'free' => 'Free',
-                        'pro' => 'Pro',
-                        'custom' => 'Custom',
-                        default => ucfirst((string) $state),
+                    ->color(fn (Hook $record): string => match ($record->access_level) {
+                        'free' => 'success',
+                        'pro' => 'warning',
+                        default => 'gray',
                     }),
+                TextColumn::make('type')
+                    ->label('Tipo')
+                    ->state(fn (Hook $record): string => $record->user_id ? 'Custom' : 'Lab')
+                    ->badge()
+                    ->color(fn (Hook $record): string => $record->user_id ? 'gray' : 'info'),
                 TextColumn::make('created_at')
                     ->label('Fecha creación')
                     ->dateTime()
@@ -351,9 +367,6 @@ class HookManager extends Page implements HasTable
                     ->modalHeading('Ver hook')
                     ->modalWidth(Width::Medium)
                     ->schema([
-                        TextEntry::make('access_level')
-                            ->label('Plan')
-                            ->badge(),
                         Grid::make(2)
                             ->schema([
                                 TextEntry::make('name')
@@ -363,7 +376,7 @@ class HookManager extends Page implements HasTable
                                     ->label('Descripción')
                                     ->color('gray')
                                     ->columnSpanFull()
-                            ])
+                            ]),
                     ]),
                 EditAction::make()
                     ->modalHeading('Editar hook')
@@ -408,7 +421,7 @@ class HookManager extends Page implements HasTable
                     if (! $this->planLimits()->canCreateGroup($user)) {
                         Notification::make()
                             ->title('Llegaste al límite de grupos')
-                            ->body('Tu plan Free permite crear 1 grupo de hooks.')
+                            ->body('Tu plan Free te permite crear hasta 2 grupos de hooks')
                             ->danger()
                             ->send();
 
@@ -439,7 +452,7 @@ class HookManager extends Page implements HasTable
                     if (! $this->planLimits()->canCreateCustomHook($user)) {
                         Notification::make()
                             ->title('Llegaste al límite de hooks personalizados')
-                            ->body('Tu plan Free permite crear hasta 10 hooks personalizados.')
+                            ->body('Tu plan Free permite crear hasta 10 hooks personalizados')
                             ->danger()
                             ->send();
 
@@ -447,9 +460,20 @@ class HookManager extends Page implements HasTable
                     }
                 })
                 ->mutateDataUsing(function (array $data): array {
+                    $baseSlug = Str::slug($data['name']);
+
+                    $slug = $baseSlug;
+                    $counter = 2;
+
+                    while (Hook::where('slug', $slug)->exists()) {
+                        $slug = "{$baseSlug}-{$counter}";
+                        $counter++;
+                    }
+
                     $data['user_id'] = Auth::id();
                     $data['access_level'] = 'custom';
-
+                    $data['slug'] = $slug;
+                    
                     return $data;
                 })
                 ->after(function (): void {

@@ -56,16 +56,12 @@ class CyclesManager extends Page implements HasActions
                     ->options(function () {
                         $hasHooks = $this->availableHooksQuery()->exists();
 
-                        return [
-                            'empty' => 'En blanco',
-                            ...($hasHooks ? [
-                                'full' => 'Con todos los hooks',
-                                'random_hooks' => 'Empezar con hooks al azar',
-                                'group_hooks' => 'Cargar grupo',
-                            ] : []),
-                        ];
+                        return $hasHooks ? [
+                            'random_hooks' => 'Al azar',
+                            'group_hooks' => 'Cargar grupo',
+                        ] : [];
                     })
-                    ->default('empty')
+                    ->default('random_hooks')
                     ->required()
                     ->live(),
 
@@ -74,12 +70,12 @@ class CyclesManager extends Page implements HasActions
                     ->suffix('hooks al azar')
                     ->numeric()
                     ->minValue(1)
-                    ->maxValue(fn () => $this->maxHooksPerCycle())
-                    ->default(fn () => $this->maxHooksPerCycle())
+                    ->maxValue(fn () => $this->maxCombosPerCycle())
+                    ->default(fn () => $this->maxCombosPerCycle())
                     ->disabled(fn () => $this->availableHooksQuery()->count() === 0)
                     ->live()
                     ->helperText(function ($get) {
-                        $totalHooks = $this->maxHooksPerCycle();
+                        $totalHooks = $this->maxCombosPerCycle();
                         $count = (int) ($get('random_hooks_count') ?? 0);
 
                         if ($totalHooks === 0) {
@@ -87,12 +83,12 @@ class CyclesManager extends Page implements HasActions
                         }
 
                         if ($count >= $totalHooks) {
-                            return 'Se usarán todos tus hooks.';
+                            return "Se llenará esta baraja con {$totalHooks} combos.";
                         }
 
                         $remaining = $totalHooks - $count;
 
-                        return "{$remaining} hooks quedarán en la bolsa.";
+                        return "{$remaining} espacios quedarán libres en esta baraja.";
                     })
                     ->visible(fn ($get) => $get('start_mode') === 'random_hooks')
                     ->required(fn ($get) => $get('start_mode') === 'random_hooks'),
@@ -117,17 +113,19 @@ class CyclesManager extends Page implements HasActions
             ])
             ->action(function (array $data): void {
                 $user = Auth::user();
-                
+
                 /** @var PlanLimitService $limits */
                 $limits = app(PlanLimitService::class);
 
                 if (! $limits->canCreateDeck($user)) {
+                    $maxDecks = $limits->limit($user, 'max_decks');
+
                     Notification::make()
                         ->title('Límite alcanzado')
-                        ->body('El plan gratis permite crear 1 baraja')
+                        ->body("Tu plan permite crear hasta {$maxDecks} barajas.")
                         ->warning()
                         ->send();
-                    
+
                     return;
                 }
 
@@ -155,18 +153,12 @@ class CyclesManager extends Page implements HasActions
 
                     if ($data['start_mode'] === 'group_hooks') {
                         $selectedHookIds = $this->availableHooksQuery()
-                            ->whereHas('groups', function ($query) use ($data) {
-                                $query->whereIn('hook_groups.id', $data['hook_group_ids'] ?? []);
-                            })
-                            ->orderBy('id')
-                            ->pluck('id')
-                            ->all();
-                    }
-
-                    if ($data['start_mode'] === 'full') {
-                        $selectedHookIds = $this->availableHooksQuery()
-                            ->orderBy('id')
-                            ->pluck('id')
+                            ->join('hook_hook_group', 'hooks.id', '=', 'hook_hook_group.hook_id')
+                            ->whereIn('hook_hook_group.hook_group_id', $data['hook_group_ids'] ?? [])
+                            ->orderByDesc('hook_hook_group.created_at')
+                            ->orderByDesc('hook_hook_group.id')
+                            ->select('hooks.id')
+                            ->pluck('hooks.id')
                             ->all();
                     }
 
@@ -176,11 +168,11 @@ class CyclesManager extends Page implements HasActions
                         ->values()
                         ->all();
 
-                    $maxIdeasPerDeck = $limits->limit($user, 'max_ideas_per_deck');
+                    $maxCombosPerDeck = $limits->limit($user, 'max_combos_per_deck');
 
-                    if (! is_null($maxIdeasPerDeck)) {
+                    if (! is_null($maxCombosPerDeck)) {
                         $selectedHookIds = collect($selectedHookIds)
-                            ->take($maxIdeasPerDeck)
+                            ->take($maxCombosPerDeck)
                             ->values()
                             ->all();
                     }
@@ -188,16 +180,15 @@ class CyclesManager extends Page implements HasActions
                     $cycle = $user->cycles()->create([
                         'name' => $data['name'],
                         'generation_mode' => match ($data['start_mode']) {
-                            'random_hooks' => 'azar',
+                            'random_hooks' => 'random',
                             'group_hooks' => 'group',
-                            'full' => 'full',
-                            default => 'empty',
+                            default => 'random',
                         },
                         'size' => count($selectedHookIds),
                         'is_active' => true,
                     ]);
 
-                    if (count($selectedHookIds)) {
+                    if (! empty($selectedHookIds)) {
                         $hooks = Hook::query()
                             ->whereIn('id', $selectedHookIds)
                             ->get()
@@ -213,26 +204,24 @@ class CyclesManager extends Page implements HasActions
                         }
                     }
 
-                    if ($data['start_mode'] !== 'full') {
-                        $remainingHookIds = $this->availableHooksQuery()
-                            ->whereNotIn('id', $selectedHookIds)
-                            ->pluck('id')
-                            ->all();
+                    $remainingHookIds = $this->availableHooksQuery()
+                        ->whereNotIn('id', $selectedHookIds)
+                        ->pluck('id')
+                        ->all();
 
-                        if (count($remainingHookIds)) {
-                            $now = now();
+                    if (! empty($remainingHookIds)) {
+                        $now = now();
 
-                            DB::table('cycle_hook_bag')->insert(
-                                collect($remainingHookIds)
-                                    ->map(fn ($hookId) => [
-                                        'cycle_id' => $cycle->id,
-                                        'hook_id' => $hookId,
-                                        'created_at' => $now,
-                                        'updated_at' => $now,
-                                    ])
-                                    ->all()
-                            );
-                        }
+                        DB::table('cycle_hook_bag')->insert(
+                            collect($remainingHookIds)
+                                ->map(fn ($hookId) => [
+                                    'cycle_id' => $cycle->id,
+                                    'hook_id' => $hookId,
+                                    'created_at' => $now,
+                                    'updated_at' => $now,
+                                ])
+                                ->all()
+                        );
                     }
                 });
 
@@ -319,16 +308,25 @@ class CyclesManager extends Page implements HasActions
 
     protected function availableHooksQuery()
     {
-        $query = Hook::query();
+        $user = Auth::user();
 
-        if (! Auth::user()->isPro()) {
-            $query->where('access_level', 'free');
-        }
+        return Hook::query()
+            ->where(function ($query) use ($user) {
+                $query
+                    ->where(function ($query) use ($user) {
+                        $query->whereNull('user_id');
 
-        return $query;
+                        if ($user->isPro()) {
+                            $query->whereIn('access_level', ['free', 'pro']);
+                        } else {
+                            $query->where('access_level', 'free');
+                        }
+                    })
+                    ->orWhere('user_id', $user->id);
+            });
     }
 
-    protected function maxHooksPerCycle(): int
+    protected function maxCombosPerCycle(): int
     {
         $user = Auth::user();
 
@@ -337,7 +335,7 @@ class CyclesManager extends Page implements HasActions
 
         $availableHooksCount = $this->availableHooksQuery()->count();
 
-        $planLimit = $limits->limit($user, 'max_ideas_per_deck');
+        $planLimit = $limits->limit($user, 'max_combos_per_deck');
 
         if (is_null($planLimit)) {
             return $availableHooksCount;

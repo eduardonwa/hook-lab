@@ -285,8 +285,31 @@ class CycleBoard extends Page implements HasActions
                 ->values()
                 ->all();
 
-            if (empty($hookIds)) {
-                return;
+            if (empty($hookIds)) { return; }
+
+            /** @var PlanLimitService $limits */
+            $limits = app(PlanLimitService::class);
+
+            $limit = $limits->limit(Auth::user(), 'max_combos_per_deck');
+
+            if (! is_null($limit)) {
+                $currentCount = $this->cycle->items()->count();
+                $remainingSlots = max(0, $limit - $currentCount);
+
+                if ($remainingSlots === 0) {
+                    Notification::make()
+                        ->title('Límite alcanzado')
+                        ->body("Esta baraja permite hasta {$limit} combos.")
+                        ->warning()
+                        ->send();
+
+                    return;
+                }
+
+                $hookIds = collect($hookIds)
+                    ->take($remainingSlots)
+                    ->values()
+                    ->all();
             }
 
             $availableHookIds = $this->cycle
@@ -349,7 +372,7 @@ class CycleBoard extends Page implements HasActions
                     ->label('Cantidad')
                     ->numeric()
                     ->minValue(1)
-                    ->maxValue(fn () => $this->bagHooksCount)
+                    ->maxValue(fn () => min($this->bagHooksCount, $this->remainingComboSlots()))
                     ->default(1)
                     ->visible(fn ($get) => $get('bag_mode') === 'random')
                     ->required(fn ($get) => $get('bag_mode') === 'random'),
@@ -500,5 +523,19 @@ class CycleBoard extends Page implements HasActions
 
         $this->refreshCycle();
         $this->dispatch('$refresh');
+    }
+
+    protected function remainingComboSlots(): int
+    {
+        /** @var PlanLimitService $limits */
+        $limits = app(PlanLimitService::class);
+
+        $limit = $limits->limit(Auth::user(), 'max_combos_per_deck');
+
+        if (is_null($limit)) {
+            return $this->bagHooksCount;
+        }
+
+        return max(0, $limit - $this->itemsCount);
     }
 }

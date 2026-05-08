@@ -2,9 +2,9 @@
 
 return [
     'free' => [
-        'max_decks' => 1,
-        'max_ideas_per_deck' => 10,
-        'max_groups' => 1,
+        'max_decks' => 2,
+        'max_combos_per_deck' => 10,
+        'max_groups' => 2,
         'max_daily_quick_hooks' => 7,
         'max_pinned_items' => 8,
         'max_custom_hooks' => 10
@@ -12,7 +12,7 @@ return [
 
     'pro' => [
         'max_decks' => null,
-        'max_ideas_per_deck' => null,
+        'max_combos_per_deck' => null,
         'max_groups' => null,
         'max_daily_quick_hooks' => null,
         'max_pinned_items' => null,

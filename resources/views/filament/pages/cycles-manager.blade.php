@@ -9,14 +9,13 @@
                 <div class="group relative pt-7">
                     {{-- Quick actions outside deck --}}
                     <div class="absolute right-2 top-0 flex gap-1 opacity-70 transition group-hover:opacity-100">
-                        {{-- Go to board --}}
+                        {{-- View board --}}
                         <x-filament::icon-button
-                            tag="a"
-                            href="{{ \App\Filament\Pages\CycleBoard::getUrl(['cycle' => $cycle->id]) }}"
-                            icon="heroicon-o-pencil-square"
+                            icon="heroicon-o-eye"
                             color="gray"
                             size="sm"
-                            tooltip="Editar cartas"
+                            tooltip="Ver cartas"
+                            wire:click="mountAction('viewCycle', { cycle_id: {{ $cycle->id }} })"
                         />
 
                         {{-- Delete deck --}}
@@ -29,11 +28,10 @@
                         />
                     </div>
 
-                    {{-- Deck button opens preview --}}
-                    <button
-                        type="button"
-                        wire:click="mountAction('viewCycle', { cycle_id: {{ $cycle->id }} })"
-                        class="relative h-40 w-full rounded-xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
+                    {{-- Edit deck --}}
+                    <a
+                        href="{{ \App\Filament\Pages\CycleBoard::getUrl(['cycle' => $cycle->id]) }}"
+                        class="relative block h-40 w-full rounded-xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
                     >
                         <div class="flex h-full flex-col justify-between">
                             <div>
@@ -46,7 +44,7 @@
                                 {{ $cycle->items_count }} cartas · {{ $cycle->bag_hooks_count }} en bolsa
                             </p>
                         </div>
-                    </button>
+                    </a>
                 </div>
             @endforeach
         </div>

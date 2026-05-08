@@ -13,14 +13,17 @@ class HookSeeder extends Seeder
      */
     public function run(): void
     {
-        $hooks = collect(config('pro-hooks'))->map(function ($hook) {
-            return array_merge($hook, [
-                'slug' => $hook['slug'] ?? Str::slug($hook['name']),
+        $hooks = collect(config('hooks'))->map(function ($hook) {
+            return [
+                'key' => $hook['key'],
+                'name' => $hook['name'],
+                'slug' => Str::slug($hook['name']),
                 'description' => str_replace('\n', "\n", trim($hook['description'])),
-                'access_level' => 'pro',
+                'access_level' => $hook['access_level'],
+                'user_id' => null,
                 'created_at' => now(),
-                'updated_at' => now()
-            ]);
+                'updated_at' => now(),
+            ];
         })->toArray();
 
         Hook::upsert(
@@ -31,7 +34,8 @@ class HookSeeder extends Seeder
                 'slug',
                 'description',
                 'access_level',
-                'updated_at'
+                'user_id',
+                'updated_at',
             ]
         );
     }
