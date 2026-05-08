@@ -24,6 +24,7 @@ use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 
 class CycleBoard extends Page implements HasActions
 {
@@ -131,8 +132,21 @@ class CycleBoard extends Page implements HasActions
                             ->with('hook')
                             ->find($this->editingItemId);
 
-                        return $item?->hook?->description ?? '-';
-                    }),
+                        $description = $item->hook?->description;
+
+                        if (blank($description)) {
+                            return '-';
+                        }
+
+                        return str($description)
+                            ->replace(["\r\n", "\r"], "\n")
+                            ->trim()
+                            ->replaceMatches("/\n{3,}/", "\n\n")
+                            ->toString();
+                    })
+                    ->extraAttributes([
+                        'class' => 'whitespace-pre-line',
+                    ]),
 
                 Select::make('idea_id')
                     ->label('Idea')

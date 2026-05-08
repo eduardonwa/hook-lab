@@ -366,6 +366,7 @@ class HookManager extends Page implements HasTable
                 ViewAction::make()
                     ->modalHeading('Ver hook')
                     ->modalWidth(Width::Medium)
+                    ->modalCancelActionLabel('Cerrar')
                     ->schema([
                         Grid::make(2)
                             ->schema([

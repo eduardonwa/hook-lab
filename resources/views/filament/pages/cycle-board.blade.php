@@ -141,9 +141,7 @@
                                     </span>
                                 </div>
 
-                                <p class="whitespace-pre-line text-md leading-6 text-gray-500 dark:text-gray-400">
-                                    {{ trim($item->hook?->description ?? 'Sin descripción.') }}
-                                </p>
+                                <p class="whitespace-pre-line text-sm leading-6 text-gray-500 dark:text-gray-400">{{ trim($item->hook?->description ?? 'Sin descripción.') }}</p>
                             </div>
 
                             {{-- IDEA --}}
