@@ -19,9 +19,11 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\HtmlString;
 
 class CycleBoard extends Page implements HasActions
 {
@@ -285,12 +287,11 @@ class CycleBoard extends Page implements HasActions
                 ->values()
                 ->all();
 
-            if (empty($hookIds)) { return; }
+            if (empty($hookIds)) {
+                return;
+            }
 
-            /** @var PlanLimitService $limits */
-            $limits = app(PlanLimitService::class);
-
-            $limit = $limits->limit(Auth::user(), 'max_combos_per_deck');
+            $limit = $this->comboLimit();
 
             if (! is_null($limit)) {
                 $currentCount = $this->cycle->items()->count();
@@ -299,7 +300,7 @@ class CycleBoard extends Page implements HasActions
                 if ($remainingSlots === 0) {
                     Notification::make()
                         ->title('Límite alcanzado')
-                        ->body("Esta baraja permite hasta {$limit} combos.")
+                        ->body("Tu plan Free permite hasta {$limit} combos por baraja.")
                         ->warning()
                         ->send();
 
@@ -353,6 +354,7 @@ class CycleBoard extends Page implements HasActions
             ->label('Agregar desde bolsa')
             ->icon('heroicon-o-plus-circle')
             ->color('gray')
+            ->visible(fn (): bool => $this->canAddMoreCombos())
             ->modalWidth(Width::Medium)
             ->modalHeading('Agregar hooks desde la bolsa')
             ->modalSubmitActionLabel('Agregar')
@@ -380,6 +382,7 @@ class CycleBoard extends Page implements HasActions
                 Select::make('hook_ids')
                     ->label('Hooks disponibles')
                     ->multiple()
+                    ->maxItems(fn () => $this->remainingComboSlots())
                     ->searchable()
                     ->preload()
                     ->options(fn () => $this->cycle
@@ -527,15 +530,68 @@ class CycleBoard extends Page implements HasActions
 
     protected function remainingComboSlots(): int
     {
-        /** @var PlanLimitService $limits */
-        $limits = app(PlanLimitService::class);
-
-        $limit = $limits->limit(Auth::user(), 'max_combos_per_deck');
+        $limit = $this->comboLimit();
 
         if (is_null($limit)) {
             return $this->bagHooksCount;
         }
 
-        return max(0, $limit - $this->itemsCount);
+        return max(0, $limit - $this->cycle->items()->count());
+    }
+
+    protected function comboLimit(): ?int
+    {
+        /** @var PlanLimitService $limits */
+        $limits = app(PlanLimitService::class);
+
+        return $limits->limit(Auth::user(), 'max_combos_per_deck');
+    }
+
+    public function canAddMoreCombos(): bool
+    {
+        $limit = $this->comboLimit();
+
+        if (is_null($limit)) {
+            return true;
+        }
+
+        return $this->cycle->items()->count() < $limit;
+    }
+
+    public function hasReachedComboLimit(): bool
+    {
+        return ! $this->canAddMoreCombos();
+    }
+
+    public function addMoreCombosAction(): Action
+    {
+        return Action::make('addMoreCombos')
+            ->label('Agregar más')
+            ->color('primary')
+            ->visible(fn (): bool => $this->hasReachedComboLimit())
+            ->modalHeading('Desbloquea más combos')
+            ->modalWidth(Width::Medium)
+            ->modalAlignment(Alignment::Center)
+            ->modalFooterActionsAlignment(Alignment::Center)
+            ->modalDescription(null)
+            ->modalContent(new HtmlString('
+                <div class="space-y-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                    <p>Tu plan Free permite hasta 10 combos por baraja. <br> Suscríbete a Pro para crear barajas sin límite.</p>
+                </div>
+            '))
+            ->modalSubmitActionLabel('Ver planes')
+            ->action(function (): void {
+                if (! config('services.stripe.billing_enabled')) {
+                    Notification::make()
+                        ->title('Pro muy pronto')
+                        ->body('El plan Pro aún no está activado. Sigue usando Hook Labs en modo Free.')
+                        ->info()
+                        ->send();
+
+                    return;
+                }
+
+                // Conectar checkout después
+            });
     }
 }

@@ -5,8 +5,6 @@ namespace App\Filament\Pages;
 use App\Models\Cycle;
 use App\Models\CycleItem;
 use Filament\Actions\Action;
-use Filament\Actions\CreateAction;
-use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Enums\Alignment;
@@ -61,7 +59,7 @@ class Dashboard extends Page
             ->modalDescription(null)
             ->modalContent(new HtmlString('
                 <div class="space-y-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                    <p>Tu plan Free permite crear 1 baraja. <br> Suscríbete a Pro para crear barajas ilimitadas.</p>
+                    <p>Tu plan Free permite crear 2 barajas. <br> Suscríbete a Pro para crear barajas ilimitadas.</p>
                 </div>
             '))
             ->modalSubmitActionLabel('Ver planes')

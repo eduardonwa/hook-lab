@@ -34,13 +34,23 @@
             </div>
 
             @if ($this->bagHooksCount > 0)
-                <x-filament::button
-                    size="sm"
-                    color="gray"
-                    wire:click="mountAction('addFromBag')"
-                >
-                    Agregar desde bolsa
-                </x-filament::button>
+                @if ($this->canAddMoreCombos())
+                    <x-filament::button
+                        size="sm"
+                        color="gray"
+                        wire:click="mountAction('addFromBag')"
+                    >
+                        Agregar desde bolsa
+                    </x-filament::button>
+                @else
+                    <x-filament::button
+                        size="sm"
+                        color="primary"
+                        wire:click="mountAction('addMoreCombos')"
+                    >
+                        Agregar más
+                    </x-filament::button>
+                @endif
             @else
                 <span class="text-xs text-gray-500">
                     Bolsa vacía
