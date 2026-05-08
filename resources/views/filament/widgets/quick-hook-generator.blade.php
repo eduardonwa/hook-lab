@@ -54,7 +54,7 @@
                 @endif
 
             @if (! auth()->user()->isPro() && ! app(\App\Services\PlanLimitService::class)->canUseQuickHookGenerator(auth()->user()))
-                <p class="text-center text-sm text-info-400">
+                <p class="w-fit flex m-auto text-center text-sm text-white bg-warning-600 py-1 px-3 rounded-full">
                     Obtén giros ilimitados con el plan Pro
                 </p>
             @endif
