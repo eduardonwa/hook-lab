@@ -17,7 +17,7 @@
                     wire:loading.attr="disabled"
                     wire:target="generateHook"
                     color="info"
-                    class="!bg-transparent !text-info-50 !shadow-none !ring-1 !ring-info-600 hover:!bg-info-600"
+                    class="!bg-transparent !text-info-900 dark:!text-info-50 !shadow-none !ring-1 !ring-info-600 hover:!bg-info-600 hover:!text-info-50"
                 >
                     <span class="inline-flex gap-1" wire:loading.remove wire:target="generateHook">
                         @svg('icon-spin-icon', 'w-5 h-5') Girar

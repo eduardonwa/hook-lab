@@ -115,8 +115,7 @@
 
                         <a
                             href="{{ route('filament.admin.pages.cycles-manager') }}"
-                            class="mt-4 inline-flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium text-primary-50 shadow-none ring-1 ring-primary-600 transition hover:bg-primary-600"
-                        >
+                            class="mt-4 inline-flex items-center gap-1 rounded-lg bg-transparent px-4 py-2 text-sm font-medium text-primary-900 ring-1 ring-primary-600 transition hover:bg-primary-600 hover:text-primary-50 dark:text-primary-50"                        >
                             @svg('icon-deck-icon', 'w-5 h-5') Crear baraja
                         </a>
                     </div>
