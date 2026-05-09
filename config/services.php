@@ -48,4 +48,10 @@ return [
         'pro_price_id' => env('STRIPE_PRO_PRICE_ID')
     ],
 
+    'mailgun' => [
+        'domain' => env('MAILGUN_DOMAIN'),
+        'secret' => env('MAILGUN_SECRET'),
+        'endpoint' => env('MAILGUN_ENDPOINT', 'api.mailgun.net'),
+    ],
+
 ];
