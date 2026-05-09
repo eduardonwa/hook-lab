@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\Register;
 use App\Filament\Pages\Dashboard;
 use Filament\Enums\ThemeMode;
 use Filament\Http\Middleware\Authenticate;
@@ -30,7 +31,7 @@ class AdminPanelProvider extends PanelProvider
             ->spa()
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->login()
-            ->registration()
+            ->registration(Register::class)
             ->colors([
                 'primary' => Color::Teal,
                 'success' => Color::Emerald,
