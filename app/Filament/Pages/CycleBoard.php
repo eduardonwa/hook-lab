@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Filament\Pages\CyclesManager;
 use App\Models\Cycle;
 use App\Models\CycleItem;
+use App\Models\Hook;
 use App\Services\PlanLimitService;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -19,6 +20,7 @@ use Filament\Pages\Page;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Schema;
 use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Auth;
@@ -85,7 +87,7 @@ class CycleBoard extends Page implements HasActions
             ->modalWidth(Width::FourExtraLarge)
             ->modalSubmitActionLabel('Guardar carta')
             ->modalCancelActionLabel('Cancelar')
-            ->mountUsing(function (array $arguments): void {
+            ->mountUsing(function (Schema $schema, array $arguments): void {
                 $this->editingItemId = (int) $arguments['item_id'];
 
                 $item = CycleItem::query()
@@ -95,6 +97,13 @@ class CycleBoard extends Page implements HasActions
 
                 $this->editingTriggerName = $item->trigger?->name;
                 $this->editingTriggerDescription = $item->trigger?->description;
+
+                $schema->fill([
+                    'hook_id' => $item->hook_id,
+                    'hook_text' => $item->hook_text,
+                    'idea_text' => $item->idea_text,
+                    'note' => $item->note,
+                ]);
             })
             ->schema([
                 Grid::make(2)
@@ -104,74 +113,121 @@ class CycleBoard extends Page implements HasActions
                                 TextEntry::make('current_trigger_name')
                                     ->label('Trigger')
                                     ->color('gray')
-                                    ->state(function () {
-                                        if (! $this->editingItemId) {
-                                            return '-';
-                                        }
-                
-                                        $item = CycleItem::query()
-                                            ->where('cycle_id', $this->cycle->id)
-                                            ->with('trigger')
-                                            ->find($this->editingItemId);
-                
-                                        return $item?->trigger?->name ?? '-';
-                                    }),
-                
+                                    ->state(fn () => $this->editingTriggerName ?? '-'),
+
                                 TextEntry::make('current_trigger_description')
                                     ->label('Descripción')
                                     ->color('gray')
-                                    ->state(function () {
-                                        if (! $this->editingItemId) {
-                                            return '-';
-                                        }
-                
-                                        $item = CycleItem::query()
-                                            ->where('cycle_id', $this->cycle->id)
-                                            ->with('trigger')
-                                            ->find($this->editingItemId);
-                
-                                        return $this->cleanText($item?->trigger?->description);
-                                    })
-                                    ->formatStateUsing(fn (string $state) => new HtmlString(nl2br(e($state))))
+                                    ->state(fn () => $this->cleanText($this->editingTriggerDescription))
+                                    ->formatStateUsing(fn (?string $state) => new HtmlString(nl2br(e($state ?? '-'))))
                                     ->html(),
                             ]),
+
                         Grid::make(1)
                             ->schema([
-                                Tabs::make('Infermayshin tabs')
+                                Tabs::make('Content')
                                     ->tabs([
-                                        Tab::make('Çontent')
+                                        Tab::make('Contenido')
                                             ->schema([
-                                                TextInput::make('hook_text')
-                                                    ->label('Hook'),
-                
-                                                TextInput::make('idea_text')
-                                                    ->label('Idea'),
-                
-                                                Textarea::make('notes')
+                                                Select::make('hook_id')
+                                                    ->label('Hook desde biblioteca')
+                                                    ->options(function () {
+                                                        if (! $this->editingItemId) {
+                                                            return [];
+                                                        }
+
+                                                        $item = CycleItem::query()
+                                                            ->where('cycle_id', $this->cycle->id)
+                                                            ->findOrFail($this->editingItemId);
+
+                                                        $user = Auth::user();
+
+                                                        return Hook::query()
+                                                            ->where(function ($query) use ($item) {
+                                                                $query
+                                                                    ->where('trigger_id', $item->trigger_id)
+                                                                    ->orWhereNull('trigger_id');
+                                                            })
+                                                            ->where(function ($query) use ($user) {
+                                                                $query
+                                                                    ->where('user_id', $user->id)
+                                                                    ->orWhere(function ($query) use ($user) {
+                                                                        $query
+                                                                            ->whereNull('user_id')
+                                                                            ->whereIn(
+                                                                                'access_level',
+                                                                                $user->isPro()
+                                                                                    ? ['free', 'pro']
+                                                                                    : ['free']
+                                                                            );
+                                                                    });
+                                                            })
+                                                            ->orderBy('name')
+                                                            ->pluck('name', 'id')
+                                                            ->toArray();
+                                                    })
+                                                    ->searchable()
+                                                    ->preload()
+                                                    ->nullable()
+                                                    ->live()
+                                                    ->afterStateUpdated(function ($state, callable $set): void {
+                                                        if (! $state) {
+                                                            return;
+                                                        }
+
+                                                        $hook = Hook::query()->find($state);
+
+                                                        if (! $hook) {
+                                                            return;
+                                                        }
+
+                                                        $set('hook_text', $hook->template ?? $hook->name);
+                                                    }),
+
+                                                Textarea::make('hook_text')
+                                                    ->label('Hook')
+                                                    ->autosize()
+                                                    ->rows(2),
+
+                                                Textarea::make('idea_text')
+                                                    ->label('Idea')
+                                                    ->autosize()
+                                                    ->rows(2),
+
+                                                Textarea::make('note')
                                                     ->label('Notas')
                                                     ->autosize()
                                                     ->rows(4),
-                                            ])
+                                            ]),
                                     ])
                                     ->extraAttributes([
                                         'class' => 'border-none shadow-none ring-0',
                                     ]),
-                            ])
-                    ])
+                            ]),
+                    ]),
             ])
-            ->action(function (): void {
+            ->action(function (array $data): void {
                 if (! $this->editingItemId) {
                     return;
                 }
 
-                CycleItem::query()
+                $item = CycleItem::query()
                     ->where('cycle_id', $this->cycle->id)
                     ->findOrFail($this->editingItemId);
 
+                $item->update([
+                    'hook_id' => $data['hook_id'] ?? null,
+                    'hook_text' => $data['hook_text'] ?? null,
+                    'idea_text' => $data['idea_text'] ?? null,
+                    'note' => $data['note'] ?? null,
+                ]);
+
                 $this->editingItemId = null;
-                
+                $this->editingTriggerName = null;
+                $this->editingTriggerDescription = null;
+
                 $this->refreshCycle();
-                
+
                 $this->dispatch('$refresh');
             });
     }
@@ -231,6 +287,10 @@ class CycleBoard extends Page implements HasActions
             foreach ($availableTriggerIds as $index => $triggerId) {
                 $this->cycle->items()->create([
                     'trigger_id' => $triggerId,
+                    'hook_id' => null,
+                    'hook_text' => null,
+                    'idea_text' => null,
+                    'note' => null,
                     'position' => $nextPosition + $index,
                 ]);
             }
@@ -271,7 +331,7 @@ class CycleBoard extends Page implements HasActions
                     ->label('Cantidad')
                     ->numeric()
                     ->minValue(1)
-                    ->maxValue($this->bagTriggersCount)
+                    ->maxValue(fn () => min($this->bagTriggersCount, $this->remainingComboSlots()))
                     ->default(1)
                     ->visible(fn ($get) => $get('bag_mode') === 'random')
                     ->required(fn ($get) => $get('bag_mode') === 'random'),

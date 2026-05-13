@@ -29,7 +29,7 @@ class Dashboard extends Page
     public function getPinnedCycleItems(): Collection
     {
         return CycleItem::query()
-            ->with(['cycle', 'hook', 'idea'])
+            ->with(['cycle', 'hook'])
             ->whereHas('cycle', fn ($query) => $query->where('user_id', Auth::id()))
             ->where('is_pinned', true)
             ->latest('pinned_at')

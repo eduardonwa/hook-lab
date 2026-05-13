@@ -83,7 +83,7 @@
                             <div class="absolute inset-0 bg-black/10 transition group-hover:bg-black/0"></div>
 
                             <div class="absolute inset-0 flex items-center justify-center">
-                                <div class="rounded-full border border-white/10 bg-black/45 px-4 py-2 backdrop-blur">
+                                <div class="rounded-lg border border-white/10 bg-black/45 px-4 py-2 backdrop-blur">
                                     <p class="text-sm font-semibold text-white">
                                         #{{ $item->position }}
                                     </p>
@@ -98,7 +98,7 @@
                             class="mx-auto flex aspect-[147/204] w-full max-w-[300px] flex-col gap-3 overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-gray-900 sm:max-w-none"
                         >
                             {{-- INNER TOP BAR --}}
-                            <div class="flex justify-end gap-1">
+                            <div class="flex justify-end gap-1 relative">
                                 {{-- MAZO BTN --}}
                                 <button
                                     type="button"
@@ -116,7 +116,7 @@
                                     wire:click="togglePinItem({{ $item->id }})"
                                     x-tooltip.raw="{{ $item->is_pinned ? 'Desfijar' : 'Fijar' }}"
                                     aria-label="{{ $item->is_pinned ? 'Desfijar' : 'Fijar' }}"
-                                    class="inline-flex items-center rounded-lg p-1.5 text-xs font-medium transition
+                                    class="absolute left-0 inline-flex items-center rounded-lg p-1.5 text-xs font-medium transition
                                         {{ $item->is_pinned
                                             ? 'bg-info-50 text-info-600 dark:bg-info-500/10'
                                             : 'text-gray-400 hover:text-info-600' }}"
@@ -167,7 +167,7 @@
                                         class="!px-2.5 !py-1.5 justify-center"
                                         wire:click="mountAction('editCard', { item_id: {{ $item->id }} })"
                                     >
-                                        Combo
+                                        Carta
                                     </x-filament::button>
 
                                     <x-filament::button
@@ -229,6 +229,10 @@
                                     </th>
 
                                     <th class="w-56 p-3 text-left font-semibold text-gray-950 dark:text-white">
+                                        Hook
+                                    </th>
+
+                                    <th class="w-56 p-3 text-left font-semibold text-gray-950 dark:text-white">
                                         Idea
                                     </th>
 
@@ -250,7 +254,11 @@
                                         </td>
 
                                         <td class="w-56 truncate p-3 font-medium text-gray-900 dark:text-gray-100">
-                                            {{ $item->idea?->name ?? '-' }}
+                                            {{ $item->hook_text ?? '-' }}
+                                        </td>
+
+                                        <td class="w-56 truncate p-3 font-medium text-gray-900 dark:text-gray-100">
+                                            {{ $item->idea_text ?? '-' }}
                                         </td>
 
                                         {{-- CARD ACTIONS --}}
@@ -276,7 +284,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="4" class="p-6 text-center text-gray-500 dark:text-gray-400">
+                                        <td colspan="5" class="p-6 text-center text-gray-500 dark:text-gray-400">
                                             Esta baraja todavía no tiene cartas.
                                         </td>
                                     </tr>
