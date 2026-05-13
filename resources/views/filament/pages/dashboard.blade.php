@@ -15,14 +15,26 @@
         <div class="grid gap-6 md:grid-cols-2">
             {{-- FAVORITES --}}
             <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                <div class="mb-4">
-                    <h2 class="text-lg font-semibold">
-                        Favoritos
-                    </h2>
+                <div class="mb-4 flex items-start justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-semibold">
+                            Favoritos
+                        </h2>
 
-                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                        Tus combinaciones fijadas
-                    </p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Tus cartas fijadas
+                        </p>
+                    </div>
+
+                    @if ($pinnedCycleItems->isNotEmpty())
+                        <button
+                            type="button"
+                            wire:click="mountAction('createDeckFromPinned')"
+                            class="text-sm font-medium text-primary-600 hover:text-primary-500"
+                        >
+                            Crear baraja
+                        </button>
+                    @endif
                 </div>
 
                 @if ($pinnedCycleItems->isEmpty())
@@ -32,7 +44,7 @@
                         </p>
 
                         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            Fija tus mejores combinaciones para verlas aquí
+                            Fija tus mejores cartas para verlas aquí
                         </p>
                     </div>
                 @else
@@ -51,15 +63,23 @@
                                         {{ $item->trigger?->name ?? 'Sin trigger' }}
                                     </span>
 
+                                    @if ($item->hook_text)
+                                        <span class="text-gray-400">+</span>
+
+                                        <span>
+                                            {{ Str::limit($item->hook_text, 32) }}
+                                        </span>
+                                    @endif
+
                                     <span class="text-gray-400">+</span>
 
-                                    @if ($item->idea)
+                                    @if ($item->idea_text)
                                         <span>
-                                            {{ $item->idea->title }}
+                                            {{ Str::limit($item->idea_text, 40) }}
                                         </span>
                                     @else
                                         <span class="text-gray-500 dark:text-gray-400">
-                                            Sin idea asignada
+                                            Sin idea
                                         </span>
                                     @endif
                                 </div>
