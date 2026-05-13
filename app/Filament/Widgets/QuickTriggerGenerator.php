@@ -108,10 +108,6 @@ class QuickTriggerGenerator extends Widget
     {
         $user = Auth::user();
 
-        if ($user->isPro()) {
-            return;
-        }
-
         QuickTriggerState::updateOrCreate(
             ['user_id' => $user->id],
             [
@@ -124,10 +120,6 @@ class QuickTriggerGenerator extends Widget
     protected function loadLastQuickTriggerState(): void
     {
         $user = Auth::user();
-
-        if ($user->isPro()) {
-            return;
-        }
 
         $state = $user
             ->quickTriggerState()

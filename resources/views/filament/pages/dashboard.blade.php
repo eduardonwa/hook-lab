@@ -4,7 +4,7 @@
 @endphp
 
 <x-filament-panels::page>
-    <div class="mx-auto max-w-5xl space-y-6">
+    <div class="mx-auto w-full max-w-5xl space-y-6">
 
         <section class="rounded-2xl border bg-white border-gray-200 p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
             <div class="mx-auto max-w-2xl">
