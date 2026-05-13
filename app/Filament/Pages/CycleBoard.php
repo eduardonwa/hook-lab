@@ -5,20 +5,16 @@ namespace App\Filament\Pages;
 use App\Filament\Pages\CyclesManager;
 use App\Models\Cycle;
 use App\Models\CycleItem;
-use App\Models\Idea;
 use App\Services\PlanLimitService;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
-use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Schema;
 use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Auth;
@@ -37,10 +33,10 @@ class CycleBoard extends Page implements HasActions
 
     public Cycle $cycle;
     public int $itemsCount = 0;
-    public int $bagHooksCount = 0;
+    public int $bagTriggersCount = 0;
     public ?int $editingItemId = null;
-    public ?string $editingHookName = null;
-    public ?string $editingHookDescription = null;
+    public ?string $editingTriggerName = null;
+    public ?string $editingTriggerDescription = null;
 
     public function mount(Cycle $cycle): void
     {
@@ -56,7 +52,7 @@ class CycleBoard extends Page implements HasActions
         $this->cycle = $this->cycle->fresh();
 
         $this->itemsCount = $this->cycle->items()->count();
-        $this->bagHooksCount = $this->cycle->bagHooks()->count();
+        $this->bagTriggersCount = $this->cycle->bagTriggers()->count();
     }
 
     public function getBreadcrumbs(): array
@@ -71,39 +67,34 @@ class CycleBoard extends Page implements HasActions
     {
         return $this->cycle
             ->items()
-            ->with(['hook', 'idea'])
+            ->with(['trigger', 'hook'])
             ->orderBy('position', 'asc')
             ->get();
     }
 
-    public function editItemAction(): Action
+    public function editCardAction(): Action
     {
-        return Action::make('editItem')
-            ->label('Editar combo')
+        return Action::make('editCard')
+            ->label('Editar carta')
             ->size('sm')
             ->icon('heroicon-o-adjustments-horizontal')
             ->modalWidth(Width::Large)
-            ->modalHeading('Editar combinación')
-            ->modalSubmitActionLabel('Guardar cambios')
+            ->modalSubmitActionLabel('Guardar carta')
             ->modalCancelActionLabel('Cancelar')
-            ->mountUsing(function (Schema $schema, array $arguments): void {
+            ->mountUsing(function (array $arguments): void {
                 $this->editingItemId = (int) $arguments['item_id'];
 
                 $item = CycleItem::query()
                     ->where('cycle_id', $this->cycle->id)
-                    ->with('hook')
+                    ->with('trigger')
                     ->findOrFail($this->editingItemId);
 
-                $this->editingHookName = $item->hook?->name;
-                $this->editingHookDescription = $item->hook?->description;
-
-                $schema->fill([
-                    'idea_id' => $item->idea_id,
-                ]);
+                $this->editingTriggerName = $item->trigger?->name;
+                $this->editingTriggerDescription = $item->trigger?->description;
             })
             ->schema([
-                TextEntry::make('current_hook_name')
-                    ->label('Hook')
+                TextEntry::make('current_trigger_name')
+                    ->label('Trigger')
                     ->color('gray')
                     ->state(function () {
                         if (! $this->editingItemId) {
@@ -112,13 +103,13 @@ class CycleBoard extends Page implements HasActions
 
                         $item = CycleItem::query()
                             ->where('cycle_id', $this->cycle->id)
-                            ->with('hook')
+                            ->with('trigger')
                             ->find($this->editingItemId);
 
-                        return $item?->hook?->name ?? '-';
+                        return $item?->trigger?->name ?? '-';
                     }),
 
-                TextEntry::make('current_hook_description')
+                TextEntry::make('current_trigger_description')
                     ->label('Descripción')
                     ->color('gray')
                     ->state(function () {
@@ -128,10 +119,10 @@ class CycleBoard extends Page implements HasActions
 
                         $item = CycleItem::query()
                             ->where('cycle_id', $this->cycle->id)
-                            ->with('hook')
+                            ->with('trigger')
                             ->find($this->editingItemId);
 
-                        $description = $item->hook?->description;
+                        $description = $item->trigger?->description;
 
                         if (blank($description)) {
                             return '-';
@@ -146,96 +137,15 @@ class CycleBoard extends Page implements HasActions
                     ->extraAttributes([
                         'class' => 'whitespace-pre-line',
                     ]),
-
-                Select::make('idea_id')
-                    ->label('Idea')
-                    ->options(function () {
-                        if (! $this->editingItemId) {
-                            return [];
-                        }
-
-                        $item = CycleItem::query()
-                            ->where('cycle_id', $this->cycle->id)
-                            ->findOrFail($this->editingItemId);
-
-                        return Idea::query()
-                            ->where('user_id', Auth::id())
-                            ->where('hook_id', $item->hook_id)
-                            ->orderBy('title')
-                            ->pluck('title', 'id')
-                            ->toArray();
-                    })
-                    ->searchable()
-                    ->preload()
-                    ->nullable()
-                    ->createOptionForm([
-                        Grid::make()
-                            ->columns([
-                                'default' => 1,
-                                'md' => 2
-                            ])
-                            ->schema([
-                                TextEntry::make('create_hook_name')
-                                    ->label('Hook')
-                                    ->state(fn () => $this->editingHookName ?? '-'),
-        
-                                TextEntry::make('create_hook_description')
-                                    ->label('Descripción')
-                                    ->state(fn () => $this->editingHookDescription ?? '-'),
-                            ]),
-                        TextInput::make('title')
-                            ->label('Título')
-                            ->required()
-                            ->maxLength(255),
-
-                        Textarea::make('description')
-                            ->label('Descripción')
-                            ->rows(3),
-                    ])
-                    ->createOptionUsing(function (array $data) {
-                        if (! $this->editingItemId) {
-                            return null;
-                        }
-
-                        $user = Auth::user();
-
-                        if (! app(PlanLimitService::class)->canCreateIdea($user)) {
-                            Notification::make()
-                                ->title('Límite de ideas alcanzado')
-                                ->body('Tu plan actual permite crear hasta 10 ideas')
-                                ->warning()
-                                ->send();
-
-                            return null;
-                        }
-
-                        $item = CycleItem::query()
-                            ->where('cycle_id', $this->cycle->id)
-                            ->findOrFail($this->editingItemId);
-
-                        return Idea::create([
-                            'title' => $data['title'],
-                            'description' => $data['description'] ?? null,
-                            'hook_id' => $item->hook_id,
-                            'user_id' => Auth::id()
-                        ])->id;
-                    })
-                    ->extraAttributes([
-                        'class' => 'idea-select-with-create',
-                    ])
             ])
-            ->action(function (array $data): void {
+            ->action(function (): void {
                 if (! $this->editingItemId) {
                     return;
                 }
 
-                $item = CycleItem::query()
+                CycleItem::query()
                     ->where('cycle_id', $this->cycle->id)
                     ->findOrFail($this->editingItemId);
-
-                $item->update([
-                    'idea_id' => $data['idea_id'] ?? null,
-                ]);
 
                 $this->editingItemId = null;
                 
@@ -245,76 +155,16 @@ class CycleBoard extends Page implements HasActions
             });
     }
 
-    public function editIdeaAction(): Action
+    protected function addTriggersToCycleFromBag(array $triggerIds): void
     {
-        return Action::make('editIdea')
-            ->label('Editar idea')
-            ->icon('heroicon-o-pencil-square')
-            ->size('sm')
-            ->modalHeading('Editar idea')
-            ->modalSubmitActionLabel('Guardar cambios')
-            ->modalCancelActionLabel('Cancelar')
-            ->mountUsing(function (Schema $schema, array $arguments): void {
-                $this->editingItemId = (int) $arguments['item_id'];
-
-                $item = CycleItem::query()
-                    ->where('cycle_id', $this->cycle->id)
-                    ->with('idea')
-                    ->findOrFail($this->editingItemId);
-
-                $schema->fill([
-                    'title' => $item->idea?->title,
-                    'description' => $item->idea?->description,
-                ]);
-            })
-            ->schema([
-                TextInput::make('title')
-                    ->label('Título')
-                    ->required()
-                    ->maxLength(255),
-
-                Textarea::make('description')
-                    ->label('Descripción')
-                    ->rows(3),
-            ])
-            ->action(function (array $data): void {
-                if (! $this->editingItemId) {
-                    return;
-                }
-
-                $item = CycleItem::query()
-                    ->where('cycle_id', $this->cycle->id)
-                    ->with('idea')
-                    ->findOrFail($this->editingItemId);
-
-                if (! $item->idea) {
-                    return;
-                }
-
-                $item->idea->update([
-                    'title' => $data['title'],
-                    'description' => $data['description'] ?? null,
-                ]);
-
-                $this->editingItemId = null;
-
-                $this->refreshCycle();
-
-                $this->dispatch('$refresh');
-            })
-            ->slideOver();
-    }
-
-    protected function addHooksToCycleFromBag(array $hookIds): void
-    {
-        DB::transaction(function () use ($hookIds) {
-            $hookIds = collect($hookIds)
+        DB::transaction(function () use ($triggerIds) {
+            $triggerIds = collect($triggerIds)
                 ->filter()
                 ->unique()
                 ->values()
                 ->all();
 
-            if (empty($hookIds)) {
+            if (empty($triggerIds)) {
                 return;
             }
 
@@ -327,45 +177,44 @@ class CycleBoard extends Page implements HasActions
                 if ($remainingSlots === 0) {
                     Notification::make()
                         ->title('Límite alcanzado')
-                        ->body("Tu plan Free permite hasta {$limit} combos por baraja.")
+                        ->body("Tu plan Free permite hasta {$limit} cartas por baraja.")
                         ->warning()
                         ->send();
 
                     return;
                 }
 
-                $hookIds = collect($hookIds)
+                $triggerIds = collect($triggerIds)
                     ->take($remainingSlots)
                     ->values()
                     ->all();
             }
 
-            $availableHookIds = $this->cycle
-                ->bagHooks()
-                ->whereIn('hooks.id', $hookIds)
-                ->pluck('hooks.id')
+            $availableTriggerIds = $this->cycle
+                ->bagTriggers()
+                ->whereIn('triggers.id', $triggerIds)
+                ->pluck('triggers.id')
                 ->all();
 
-            $availableHookIds = collect($availableHookIds)
-                ->sortBy(fn ($hookId) => array_search($hookId, $hookIds))
+            $availableTriggerIds = collect($availableTriggerIds)
+                ->sortBy(fn ($triggerId) => array_search($triggerId, $triggerIds))
                 ->values()
                 ->all();
 
-            if (empty($availableHookIds)) {
+            if (empty($availableTriggerIds)) {
                 return;
             }
 
             $nextPosition = ((int) $this->cycle->items()->max('position')) + 1;
 
-            foreach ($availableHookIds as $index => $hookId) {
+            foreach ($availableTriggerIds as $index => $triggerId) {
                 $this->cycle->items()->create([
-                    'hook_id' => $hookId,
-                    'idea_id' => null,
+                    'trigger_id' => $triggerId,
                     'position' => $nextPosition + $index,
                 ]);
             }
 
-            $this->cycle->bagHooks()->detach($availableHookIds);
+            $this->cycle->bagTriggers()->detach($availableTriggerIds);
 
             $this->cycle->update([
                 'size' => $this->cycle->items()->count(),
@@ -383,15 +232,15 @@ class CycleBoard extends Page implements HasActions
             ->color('gray')
             ->visible(fn (): bool => $this->canAddMoreCombos())
             ->modalWidth(Width::Medium)
-            ->modalHeading('Agregar hooks desde la bolsa')
+            ->modalHeading('Agregar triggers desde la bolsa')
             ->modalSubmitActionLabel('Agregar')
             ->modalCancelActionLabel('Cancelar')
             ->schema([
                 Radio::make('bag_mode')
-                    ->label('¿Cómo quieres agregar?')
+                    ->label('¿Cómo quieres agregar un trigger nuevo?')
                     ->options([
-                        'random' => 'Sacar hooks al azar',
-                        'manual' => 'Elegir hooks',
+                        'random' => 'Al azar',
+                        'manual' => 'Elegir',
                     ])
                     ->default('random')
                     ->required()
@@ -401,22 +250,22 @@ class CycleBoard extends Page implements HasActions
                     ->label('Cantidad')
                     ->numeric()
                     ->minValue(1)
-                    ->maxValue(fn () => min($this->bagHooksCount, $this->remainingComboSlots()))
+                    ->maxValue($this->bagTriggersCount)
                     ->default(1)
                     ->visible(fn ($get) => $get('bag_mode') === 'random')
                     ->required(fn ($get) => $get('bag_mode') === 'random'),
 
-                Select::make('hook_ids')
-                    ->label('Hooks disponibles')
+                Select::make('trigger_ids')
+                    ->label('Triggers disponibles')
                     ->multiple()
                     ->maxItems(fn () => $this->remainingComboSlots())
                     ->searchable()
                     ->preload()
                     ->options(fn () => $this->cycle
                         ->fresh()
-                        ->bagHooks()
+                        ->bagTriggers()
                         ->orderBy('name')
-                        ->pluck('name', 'hooks.id')
+                        ->pluck('name', 'triggers.id')
                         ->toArray()
                     )
                     ->visible(fn ($get) => $get('bag_mode') === 'manual')
@@ -424,19 +273,19 @@ class CycleBoard extends Page implements HasActions
             ])
             ->action(function (array $data): void {
                 if ($data['bag_mode'] === 'random') {
-                    $hookIds = $this->cycle
+                    $triggerIds = $this->cycle
                         ->fresh()
-                        ->bagHooks()
+                        ->bagTriggers()
                         ->inRandomOrder()
                         ->limit((int) $data['random_count'])
-                        ->pluck('hooks.id')
+                        ->pluck('triggers.id')
                         ->all();
 
-                    $this->addHooksToCycleFromBag($hookIds);
+                    $this->addTriggersToCycleFromBag($triggerIds);
                 }
 
                 if ($data['bag_mode'] === 'manual') {
-                    $this->addHooksToCycleFromBag($data['hook_ids'] ?? []);
+                    $this->addTriggersToCycleFromBag($data['trigger_ids'] ?? []);
                 }
 
                 $this->refreshCycle();
@@ -445,28 +294,28 @@ class CycleBoard extends Page implements HasActions
             });
     }
 
-    public function removeItemAction(): Action
+    public function removeCardAction(): Action
     {
-        return Action::make('removeItem')
+        return Action::make('removeCard')
             ->label('Quitar carta')
             ->icon('heroicon-o-trash')
             ->size('sm')
             ->color('danger')
             ->requiresConfirmation()
             ->modalHeading('Quitar carta de la baraja')
-            ->modalDescription('El hook volverá a la bolsa para que puedas usarlo después.')
+            ->modalDescription('El trigger volverá a la bolsa para que puedas usarlo después.')
             ->action(function (array $arguments): void {
                 DB::transaction(function () use ($arguments) {
                     $item = CycleItem::query()
                         ->where('cycle_id', $this->cycle->id)
                         ->findOrFail((int) $arguments['item_id']);
 
-                    $hookId = $item->hook_id;
+                    $triggerId = $item->trigger_id;
 
                     $item->delete();
 
-                    $this->cycle->bagHooks()->syncWithoutDetaching([
-                        $hookId => [
+                    $this->cycle->bagTriggers()->syncWithoutDetaching([
+                        $triggerId => [
                             'created_at' => now(),
                             'updated_at' => now(),
                         ],
@@ -505,7 +354,7 @@ class CycleBoard extends Page implements HasActions
             if (! $canPin) {
                 Notification::make()
                     ->title('Llegaste al límite de fijados')
-                    ->body('Tu plan Free permite fijar hasta 8 combos.')
+                    ->body('Tu plan Free permite fijar hasta 8 cartas.')
                     ->danger()
                     ->send();
 
@@ -560,7 +409,7 @@ class CycleBoard extends Page implements HasActions
         $limit = $this->comboLimit();
 
         if (is_null($limit)) {
-            return $this->bagHooksCount;
+            return $this->bagTriggersCount;
         }
 
         return max(0, $limit - $this->cycle->items()->count());
@@ -596,14 +445,14 @@ class CycleBoard extends Page implements HasActions
             ->label('Agregar más')
             ->color('primary')
             ->visible(fn (): bool => $this->hasReachedComboLimit())
-            ->modalHeading('Desbloquea más combos')
+            ->modalHeading('Desbloquea más cartas')
             ->modalWidth(Width::Medium)
             ->modalAlignment(Alignment::Center)
             ->modalFooterActionsAlignment(Alignment::Center)
             ->modalDescription(null)
             ->modalContent(new HtmlString('
                 <div class="space-y-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                    <p>Tu plan Free permite hasta 10 combos por baraja. <br> Suscríbete a Pro para crear barajas sin límite.</p>
+                    <p>Tu plan Free permite hasta 10 cartas por baraja. <br> Suscríbete a Pro para crear barajas sin límite.</p>
                 </div>
             '))
             ->modalSubmitActionLabel('Ver planes')

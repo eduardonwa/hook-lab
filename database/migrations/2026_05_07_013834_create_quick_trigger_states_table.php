@@ -11,12 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('ideas', function (Blueprint $table) {
+        Schema::create('quick_trigger_states', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('hook_id')->constrained()->cascadeOnDelete();
-            $table->string('title');
-            $table->text('description')->nullable();
+            
+            $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
+            $table->foreignId('trigger_id')->constrained()->cascadeOnDelete();
+            $table->timestamp('expires_at')->index();
+            
             $table->timestamps();
         });
     }
@@ -26,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('ideas');
+        Schema::dropIfExists('hook_generator_states');
     }
 };

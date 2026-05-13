@@ -3,8 +3,8 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Pages\CycleBoard;
-use App\Models\Hook;
-use App\Models\HookGroup;
+use App\Models\Trigger;
+use App\Models\TriggerGroup;
 use App\Services\CycleNameGenerator;
 use App\Services\PlanLimitService;
 use Filament\Actions\Action;
@@ -54,62 +54,66 @@ class CyclesManager extends Page implements HasActions
                 Radio::make('start_mode')
                     ->label('¿Cómo quieres comenzar?')
                     ->options(function () {
-                        $hasHooks = $this->availableHooksQuery()->exists();
+                        $hasTriggers = $this->availableTriggersQuery()->exists();
 
-                        return $hasHooks ? [
-                            'random_hooks' => 'Al azar',
-                            'group_hooks' => 'Cargar grupo',
+                        return $hasTriggers ? [
+                            'random_triggers' => 'Sorpréndeme (random)',
+                            'group_triggers' => 'Cargar grupo',
                         ] : [];
                     })
-                    ->default('random_hooks')
+                    ->default('random_triggers')
                     ->required()
                     ->live(),
 
-                TextInput::make('random_hooks_count')
+                TextInput::make('random_triggers_count')
                     ->label('Empezar con')
-                    ->suffix('hooks al azar')
+                    ->suffix('triggers al azar')
                     ->numeric()
                     ->minValue(1)
                     ->maxValue(fn () => $this->maxCombosPerCycle())
                     ->default(fn () => $this->maxCombosPerCycle())
-                    ->disabled(fn () => $this->availableHooksQuery()->count() === 0)
+                    ->disabled(fn () => $this->availableTriggersQuery()->count() === 0)
                     ->live()
                     ->helperText(function ($get) {
-                        $totalHooks = $this->maxCombosPerCycle();
-                        $count = (int) ($get('random_hooks_count') ?? 0);
+                        $totalTriggers = $this->maxCombosPerCycle();
+                        $count = (int) ($get('random_triggers_count') ?? 0);
 
-                        if ($totalHooks === 0) {
-                            return 'No hay hooks disponibles todavía.';
+                        if ($totalTriggers === 0) {
+                            return 'No hay triggers disponibles todavía.';
                         }
 
-                        if ($count >= $totalHooks) {
-                            return "Se llenará esta baraja con {$totalHooks} combos.";
+                        if ($count >= $totalTriggers) {
+                            return "Se llenará esta baraja con {$totalTriggers} cartas.";
                         }
 
-                        $remaining = $totalHooks - $count;
+                        $remaining = $totalTriggers - $count;
 
                         return "{$remaining} espacios quedarán libres en esta baraja.";
                     })
-                    ->visible(fn ($get) => $get('start_mode') === 'random_hooks')
-                    ->required(fn ($get) => $get('start_mode') === 'random_hooks'),
+                    ->visible(fn ($get) => $get('start_mode') === 'random_triggers')
+                    ->required(fn ($get) => $get('start_mode') === 'random_triggers'),
 
-                Select::make('hook_group_ids')
-                    ->label('Grupos de hooks')
+                Select::make('trigger_group_ids')
+                    ->label('Grupos de triggers')
                     ->multiple()
                     ->searchable()
                     ->preload()
-                    ->options(fn () => HookGroup::query()
-                        ->whereHas('hooks', function ($query) {
-                            if (! Auth::user()->isPro()) {
-                                $query->where('access_level', 'free');
-                            }
+                    ->options(fn () => TriggerGroup::query()
+                        ->where('user_id', Auth::id())
+                        ->whereHas('triggers', function ($query) {
+                            $query->whereIn(
+                                'access_level',
+                                Auth::user()->isPro()
+                                    ? ['free', 'pro']
+                                    : ['free']
+                            );
                         })
                         ->orderBy('name')
                         ->pluck('name', 'id')
                         ->toArray()
                     )
-                    ->visible(fn ($get) => $get('start_mode') === 'group_hooks')
-                    ->required(fn ($get) => $get('start_mode') === 'group_hooks'),
+                    ->visible(fn ($get) => $get('start_mode') === 'group_triggers')
+                    ->required(fn ($get) => $get('start_mode') === 'group_triggers'),
             ])
             ->action(function (array $data): void {
                 $user = Auth::user();
@@ -134,35 +138,35 @@ class CyclesManager extends Page implements HasActions
                         'is_active' => false,
                     ]);
 
-                    $selectedHookIds = [];
+                    $selectedTriggerIds = [];
 
-                    if ($data['start_mode'] === 'random_hooks') {
-                        $totalHooks = $this->availableHooksQuery()->count();
+                    if ($data['start_mode'] === 'random_triggers') {
+                        $totalTriggers = $this->availableTriggersQuery()->count();
 
                         $count = min(
-                            (int) ($data['random_hooks_count'] ?? 1),
-                            $totalHooks,
+                            (int) ($data['random_triggers_count'] ?? 1),
+                            $totalTriggers,
                         );
 
-                        $selectedHookIds = $this->availableHooksQuery()
+                        $selectedTriggerIds = $this->availableTriggersQuery()
                             ->inRandomOrder()
                             ->limit($count)
                             ->pluck('id')
                             ->all();
                     }
 
-                    if ($data['start_mode'] === 'group_hooks') {
-                        $selectedHookIds = $this->availableHooksQuery()
-                            ->join('hook_hook_group', 'hooks.id', '=', 'hook_hook_group.hook_id')
-                            ->whereIn('hook_hook_group.hook_group_id', $data['hook_group_ids'] ?? [])
-                            ->orderByDesc('hook_hook_group.created_at')
-                            ->orderByDesc('hook_hook_group.id')
-                            ->select('hooks.id')
-                            ->pluck('hooks.id')
+                    if ($data['start_mode'] === 'group_triggers') {
+                        $selectedTriggerIds = $this->availableTriggersQuery()
+                            ->join('trigger_trigger_group', 'triggers.id', '=', 'trigger_trigger_group.trigger_id')
+                            ->whereIn('trigger_trigger_group.trigger_group_id', $data['trigger_group_ids'] ?? [])
+                            ->orderBy('trigger_trigger_group.sort_order')
+                            ->orderBy('triggers.name')
+                            ->select('triggers.id')
+                            ->pluck('triggers.id')
                             ->all();
                     }
 
-                    $selectedHookIds = collect($selectedHookIds)
+                    $selectedTriggerIds = collect($selectedTriggerIds)
                         ->filter()
                         ->unique()
                         ->values()
@@ -171,7 +175,7 @@ class CyclesManager extends Page implements HasActions
                     $maxCombosPerDeck = $limits->limit($user, 'max_combos_per_deck');
 
                     if (! is_null($maxCombosPerDeck)) {
-                        $selectedHookIds = collect($selectedHookIds)
+                        $selectedTriggerIds = collect($selectedTriggerIds)
                             ->take($maxCombosPerDeck)
                             ->values()
                             ->all();
@@ -180,43 +184,45 @@ class CyclesManager extends Page implements HasActions
                     $cycle = $user->cycles()->create([
                         'name' => $data['name'],
                         'generation_mode' => match ($data['start_mode']) {
-                            'random_hooks' => 'random',
-                            'group_hooks' => 'group',
+                            'random_triggers' => 'random',
+                            'group_triggers' => 'group',
                             default => 'random',
                         },
-                        'size' => count($selectedHookIds),
+                        'size' => count($selectedTriggerIds),
                         'is_active' => true,
                     ]);
 
-                    if (! empty($selectedHookIds)) {
-                        $hooks = Hook::query()
-                            ->whereIn('id', $selectedHookIds)
+                    if (! empty($selectedTriggerIds)) {
+                        $triggers = Trigger::query()
+                            ->whereIn('id', $selectedTriggerIds)
                             ->get()
-                            ->sortBy(fn ($hook) => array_search($hook->id, $selectedHookIds))
+                            ->sortBy(fn ($trigger) => array_search($trigger->id, $selectedTriggerIds))
                             ->values();
 
-                        foreach ($hooks as $index => $hook) {
+                        foreach ($triggers as $index => $trigger) {
                             $cycle->items()->create([
-                                'hook_id' => $hook->id,
+                                'trigger_id' => $trigger->id,
+                                'hook_id' => null,
+                                'hook_text' => null,
+                                'idea_text' => null,
                                 'position' => $index + 1,
-                                'idea_id' => null,
                             ]);
                         }
                     }
 
-                    $remainingHookIds = $this->availableHooksQuery()
-                        ->whereNotIn('id', $selectedHookIds)
+                    $remainingTriggerIds = $this->availableTriggersQuery()
+                        ->whereNotIn('id', $selectedTriggerIds)
                         ->pluck('id')
                         ->all();
 
-                    if (! empty($remainingHookIds)) {
+                    if (! empty($remainingTriggerIds)) {
                         $now = now();
 
-                        DB::table('cycle_hook_bag')->insert(
-                            collect($remainingHookIds)
-                                ->map(fn ($hookId) => [
+                        DB::table('cycle_trigger_bag')->insert(
+                            collect($remainingTriggerIds)
+                                ->map(fn ($triggerId) => [
                                     'cycle_id' => $cycle->id,
-                                    'hook_id' => $hookId,
+                                    'trigger_id' => $triggerId,
                                     'created_at' => $now,
                                     'updated_at' => $now,
                                 ])
@@ -250,8 +256,8 @@ class CyclesManager extends Page implements HasActions
                 $cycle = Auth::user()
                     ->cycles()
                     ->with([
+                        'items.trigger',
                         'items.hook',
-                        'items.idea',
                     ])
                     ->findOrFail($arguments['cycle_id']);
 
@@ -279,7 +285,7 @@ class CyclesManager extends Page implements HasActions
     {
         return Auth::user()
             ->cycles()
-            ->withCount(['items', 'bagHooks'])
+            ->withCount(['items', 'bagTriggers'])
             ->latest()
             ->get();
     }
@@ -306,24 +312,18 @@ class CyclesManager extends Page implements HasActions
             });
     }
 
-    protected function availableHooksQuery()
+    protected function availableTriggersQuery()
     {
         $user = Auth::user();
 
-        return Hook::query()
-            ->where(function ($query) use ($user) {
-                $query
-                    ->where(function ($query) use ($user) {
-                        $query->whereNull('user_id');
-
-                        if ($user->isPro()) {
-                            $query->whereIn('access_level', ['free', 'pro']);
-                        } else {
-                            $query->where('access_level', 'free');
-                        }
-                    })
-                    ->orWhere('user_id', $user->id);
-            });
+        return Trigger::query()
+            ->where('is_active', true)
+            ->whereIn(
+                'access_level',
+                $user->isPro()
+                    ? ['free', 'pro']
+                    : ['free']
+            );
     }
 
     protected function maxCombosPerCycle(): int
@@ -333,14 +333,14 @@ class CyclesManager extends Page implements HasActions
         /** @var PlanLimitService $limits */
         $limits = app(PlanLimitService::class);
 
-        $availableHooksCount = $this->availableHooksQuery()->count();
+        $availableTriggersCount = $this->availableTriggersQuery()->count();
 
         $planLimit = $limits->limit($user, 'max_combos_per_deck');
 
         if (is_null($planLimit)) {
-            return $availableHooksCount;
+            return $availableTriggersCount;
         }
 
-        return min($availableHooksCount, $planLimit);
+        return min($availableTriggersCount, $planLimit);
     }
 }

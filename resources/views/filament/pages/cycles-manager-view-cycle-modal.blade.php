@@ -10,7 +10,8 @@
                     <thead class="sticky top-0 z-10 bg-gray-50 dark:bg-gray-950">
                         <tr class="border-b border-gray-200 dark:border-white/10">
                             <th class="w-16 p-3 text-left">#</th>
-                            <th class="w-56 p-3 text-left">Hook</th>
+                            <th class="w-56 p-3 text-left">Trigger</th>
+                            <th class="p-3 text-left">Hook</th>
                             <th class="p-3 text-left">Idea</th>
                         </tr>
                     </thead>
@@ -23,11 +24,15 @@
                                 </td>
 
                                 <td class="w-56 p-3 font-medium text-gray-900 dark:text-gray-100">
-                                    {{ $item->hook?->name ?? '-' }}
+                                    {{ $item->trigger?->name ?? '-' }}
+                                </td>
+
+                                <td class="w-56 p-3 text-gray-500 dark:text-gray-400">
+                                    {{ $item->hook_text ?? $item->hook?->name ?? '-' }}
                                 </td>
 
                                 <td class="p-3 text-gray-500 dark:text-gray-400">
-                                    {{ $item->idea?->title ?? '-' }}
+                                    {{ $item->idea_text ?? '-' }}
                                 </td>
                             </tr>
                         @empty

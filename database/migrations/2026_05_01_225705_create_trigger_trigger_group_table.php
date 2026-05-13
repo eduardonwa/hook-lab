@@ -11,14 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('hook_hook_group', function (Blueprint $table) {
+        Schema::create('trigger_trigger_group', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('hook_group_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('hook_id')->constrained()->cascadeOnDelete();
+            
+            $table->foreignId('trigger_group_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('trigger_id')->constrained()->cascadeOnDelete();
+            
             $table->unsignedInteger('sort_order')->default(0);
+            
             $table->timestamps();
 
-            $table->unique(['hook_group_id', 'hook_id']);
+            $table->unique(['trigger_group_id', 'trigger_id']);
         });
     }
 

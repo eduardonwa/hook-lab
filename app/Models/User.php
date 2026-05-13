@@ -6,9 +6,8 @@ namespace App\Models;
 
 use App\Models\Cycle;
 use App\Models\Hook;
-use App\Models\HookGeneratorState;
-use App\Models\HookGroup;
-use App\Models\Idea;
+use App\Models\QuickTriggerState;
+use App\Models\TriggerGroup;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -62,9 +61,9 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(Hook::class);
     }
 
-    public function hookGroups(): HasMany
+    public function triggerGroups(): HasMany
     {
-        return $this->hasMany(HookGroup::class);
+        return $this->hasMany(TriggerGroup::class);
     }
 
     public function cycles(): HasMany
@@ -72,14 +71,9 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(Cycle::class);
     }
 
-    public function hookGeneratorState(): HasOne
+    public function quickTriggerState(): HasOne
     {
-        return $this->hasOne(HookGeneratorState::class);
-    }
-
-    public function ideas(): HasMany
-    {
-        return $this->hasMany(Idea::class);
+        return $this->hasOne(QuickTriggerState::class);
     }
 
     public function canAccessPanel(Panel $panel):bool

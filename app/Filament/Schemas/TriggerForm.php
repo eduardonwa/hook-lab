@@ -5,9 +5,10 @@ namespace App\Filament\Schemas;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 
-class HookForm
+class TriggerForm
 {
     public static function configure(Schema $schema): Schema
     {
@@ -17,22 +18,19 @@ class HookForm
     public static function getFormSchema(): array
     {
         return [
-            Select::make('trigger_id')
-                ->label('Trigger')
-                ->relationship('trigger', 'name')
-                ->searchable()
-                ->preload()
-                ->nullable(),
-            
             TextInput::make('name')
                 ->label('Nombre')
-                ->required()
-                ->columnSpanFull(),
+                ->required(),
 
             Textarea::make('description')
                 ->label('Descripción')
-                ->autosize()
-                ->columnSpanFull(),
+                ->autosize(),
+
+            Select::make('access_level')
+                ->label('Plan'),
+
+            Toggle::make('is_active')
+                ->label('Activo')
         ];
     }
 }

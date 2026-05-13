@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Database\Seeders\FreeUserSeeder;
-use Database\Seeders\HookSeeder;
+use Database\Seeders\TriggerSeeder;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -17,7 +17,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             FreeUserSeeder::class,
-            HookSeeder::class
+            TriggerSeeder::class
         ]);
     }
 }

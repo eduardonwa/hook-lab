@@ -11,13 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('cycle_hook_bag', function (Blueprint $table) {
+        Schema::create('cycle_trigger_bag', function (Blueprint $table) {
             $table->id();
+            
             $table->foreignId('cycle_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('hook_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('trigger_id')->constrained()->cascadeOnDelete();
+            
             $table->timestamps();
 
-            $table->unique(['cycle_id', 'hook_id']);
+            $table->unique(['cycle_id', 'trigger_id']);
         });
     }
 
@@ -26,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('cycle_hook_bags');
+        Schema::dropIfExists('cycle_trigger_bag');
     }
 };

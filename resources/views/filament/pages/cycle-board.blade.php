@@ -11,7 +11,7 @@
                 </h1>
 
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    {{ $this->itemsCount }} cartas · {{ $this->bagHooksCount }} hooks en bolsa
+                    {{ $this->itemsCount }} cartas · {{ $this->bagTriggersCount }} triggers en bolsa
                 </p>
             </div>
 
@@ -33,7 +33,7 @@
                 </x-filament::button>
             </div>
 
-            @if ($this->bagHooksCount > 0)
+            @if ($this->bagTriggersCount > 0)
                 @if ($this->canAddMoreCombos())
                     <x-filament::button
                         size="sm"
@@ -129,7 +129,7 @@
                                 </button>
                             </div>
                             
-                            {{-- HOOK DESCRIPTION --}}
+                            {{-- TRIGGER DESCRIPTION --}}
                             <div class="min-h-0 flex-1 overflow-y-auto pr-1">
                                 <div class="sticky top-0 z-10 bg-white pb-2 text-base font-bold text-gray-950 dark:bg-gray-900 dark:text-white flex items-center">
                                     <span class="mr-1 text-sm font-medium text-gray-400 dark:text-gray-500">
@@ -137,11 +137,11 @@
                                     </span>
 
                                     <span class="text-xl sm:text-xl lg:text-[1.3rem]">
-                                        {{ $item->hook?->name ?? '-' }}
+                                        {{ $item->trigger?->name ?? '-' }}
                                     </span>
                                 </div>
 
-                                <p class="whitespace-pre-line text-sm leading-6 text-gray-500 dark:text-gray-400">{{ trim($item->hook?->description ?? 'Sin descripción.') }}</p>
+                                <p class="whitespace-pre-line text-sm leading-6 text-gray-500 dark:text-gray-400">{{ trim($item->trigger?->description ?? 'Sin descripción.') }}</p>
                             </div>
 
                             {{-- IDEA --}}
@@ -151,7 +151,7 @@
                                 </p>
 
                                 <p class="mt-1 text-md font-medium text-gray-900 dark:text-gray-100">
-                                    {{ Str::limit($item->idea?->title ?? 'Sin idea asignada', 24) }}
+                                    {{ Str::limit($item->idea_text ?? 'Sin idea', 48) }}
                                 </p>
                             </div>
 
@@ -159,26 +159,13 @@
                             <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
                                 {{-- Mobile --}}
                                 <div class="flex gap-2 sm:hidden">
-                                    @if ($item->idea_id)
-                                        <x-filament::button
-                                            color="gray"
-                                            outlined
-                                            size="sm"
-                                            icon="heroicon-o-pencil-square"
-                                            class="!px-2.5 !py-1.5 justify-center"
-                                            wire:click="mountAction('editIdea', { item_id: {{ $item->id }} })"
-                                        >
-                                            Idea
-                                        </x-filament::button>
-                                    @endif
-
                                     <x-filament::button
                                         color="primary"
                                         outlined
                                         size="sm"
                                         icon="heroicon-o-adjustments-horizontal"
                                         class="!px-2.5 !py-1.5 justify-center"
-                                        wire:click="mountAction('editItem', { item_id: {{ $item->id }} })"
+                                        wire:click="mountAction('editCard', { item_id: {{ $item->id }} })"
                                     >
                                         Combo
                                     </x-filament::button>
@@ -189,7 +176,7 @@
                                         size="sm"
                                         icon="heroicon-o-trash"
                                         class="!px-2.5 !py-1.5 justify-center"
-                                        wire:click="mountAction('removeItem', { item_id: {{ $item->id }} })"
+                                        wire:click="mountAction('removeCard', { item_id: {{ $item->id }} })"
                                     >
                                         Quitar
                                     </x-filament::button>
@@ -197,30 +184,20 @@
 
                                 {{-- Desktop --}}
                                 <div class="hidden gap-2 sm:flex">
-                                    @if ($item->idea_id)
-                                        <x-filament::icon-button
-                                            icon="heroicon-o-pencil-square"
-                                            color="gray"
-                                            size="sm"
-                                            tooltip="Editar idea"
-                                            wire:click="mountAction('editIdea', { item_id: {{ $item->id }} })"
-                                        />
-                                    @endif
-
                                     <x-filament::icon-button
                                         icon="heroicon-o-adjustments-horizontal"
                                         color="primary"
                                         size="sm"
-                                        tooltip="Editar combo"
-                                        wire:click="mountAction('editItem', { item_id: {{ $item->id }} })"
+                                        tooltip="Editar"
+                                        wire:click="mountAction('editCard', { item_id: {{ $item->id }} })"
                                     />
 
                                     <x-filament::icon-button
                                         icon="heroicon-o-trash"
                                         color="danger"
                                         size="sm"
-                                        tooltip="Quitar carta"
-                                        wire:click="mountAction('removeItem', { item_id: {{ $item->id }} })"
+                                        tooltip="Quitar"
+                                        wire:click="mountAction('removeCard', { item_id: {{ $item->id }} })"
                                     />
                                 </div>
                             </div>
@@ -248,7 +225,7 @@
                                     </th>
 
                                     <th class="w-56 p-3 text-left font-semibold text-gray-950 dark:text-white">
-                                        Hook
+                                        Trigger
                                     </th>
 
                                     <th class="w-56 p-3 text-left font-semibold text-gray-950 dark:text-white">
@@ -269,40 +246,30 @@
                                         </td>
 
                                         <td class="w-56 truncate p-3 font-medium text-gray-900 dark:text-gray-100">
-                                            {{ $item->hook?->name ?? '-' }}
+                                            {{ $item->trigger?->name ?? '-' }}
                                         </td>
 
-                                        <td class="w-56 truncate p-3 text-gray-500 dark:text-gray-400">
-                                            {{ $item->idea?->title ?? '-' }}
+                                        <td class="w-56 truncate p-3 font-medium text-gray-900 dark:text-gray-100">
+                                            {{ $item->idea?->name ?? '-' }}
                                         </td>
 
                                         {{-- CARD ACTIONS --}}
                                         <td class="w-40 p-3">
                                             <div class="flex justify-end gap-2">
-                                                @if ($item->idea_id)
-                                                    <x-filament::icon-button
-                                                        icon="heroicon-o-pencil-square"
-                                                        color="gray"
-                                                        size="sm"
-                                                        tooltip="Editar idea"
-                                                        wire:click="mountAction('editIdea', { item_id: {{ $item->id }} })"
-                                                    />
-                                                @endif
-
                                                 <x-filament::icon-button
                                                     icon="heroicon-o-adjustments-horizontal"
                                                     color="primary"
                                                     size="sm"
-                                                    tooltip="Editar combo"
-                                                    wire:click="mountAction('editItem', { item_id: {{ $item->id }} })"
+                                                    tooltip="Editar"
+                                                    wire:click="mountAction('editCard', { item_id: {{ $item->id }} })"
                                                 />
 
                                                 <x-filament::icon-button
                                                     icon="heroicon-o-trash"
                                                     color="danger"
                                                     size="sm"
-                                                    tooltip="Quitar carta"
-                                                    wire:click="mountAction('removeItem', { item_id: {{ $item->id }} })"
+                                                    tooltip="Quitar"
+                                                    wire:click="mountAction('removeCard', { item_id: {{ $item->id }} })"
                                                 />
                                             </div>
                                         </td>

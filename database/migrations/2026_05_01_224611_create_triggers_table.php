@@ -11,23 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('hooks', function (Blueprint $table) {
+        Schema::create('triggers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('trigger_id')->nullable()->constrained()->nullOnDelete();
-            
-            $table->string('name');
+
+            $table->string('name')->unique();
             $table->string('slug')->unique();
             $table->text('description')->nullable();
-            $table->text('template')->nullable();
 
             $table->string('access_level')->default('pro')->index();
             $table->string('key')->nullable()->unique();
-            
-            $table->timestamps();
 
-            $table->unique(['user_id', 'name']);
-            $table->index(['trigger_id']);
+            $table->unsignedInteger('sort_order')->default(0);
+            $table->boolean('is_active')->default(true)->index();
+
+            $table->timestamps();
         });
     }
 
@@ -36,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('hooks');
+        Schema::dropIfExists('triggers');
     }
 };

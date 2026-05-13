@@ -3,21 +3,21 @@
 namespace App\Models;
 
 use App\Models\Cycle;
-use App\Models\Hook;
+use App\Models\Trigger;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class CycleHookBag extends Model
+class CycleTriggerBag extends Model
 {
-    protected $table = 'cycle_hook_bag';
+    protected $table = 'cycle_trigger_bag';
     
     public function cycle(): BelongsTo
     {
         return $this->belongsTo(Cycle::class);
     }
 
-    public function hook(): BelongsTo
+    public function trigger(): BelongsTo
     {
-        return $this->belongsTo(Hook::class);
+        return $this->belongsTo(Trigger::class);
     }
 }

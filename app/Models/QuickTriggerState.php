@@ -2,19 +2,19 @@
 
 namespace App\Models;
 
-use App\Models\Hook;
+use App\Models\Trigger;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class HookGeneratorState extends Model
+class QuickTriggerState extends Model
 {
     protected $casts = [
         'expires_at' => 'datetime'
     ];
 
-    public function hook(): BelongsTo
+    public function trigger(): BelongsTo
     {
-        return $this->belongsTo(Hook::class);
+        return $this->belongsTo(Trigger::class);
     }
 
     public function isExpired(): bool

@@ -8,7 +8,7 @@
 
         <section class="rounded-2xl border bg-white border-gray-200 p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
             <div class="mx-auto max-w-2xl">
-                @livewire(\App\Filament\Widgets\QuickHookGenerator::class)
+                @livewire(\App\Filament\Widgets\QuickTriggerGenerator::class)
             </div>
         </section>
 
@@ -48,7 +48,7 @@
 
                                 <div class="mt-1 overflow-x-auto whitespace-nowrap pb-1 text-sm font-medium text-gray-950 dark:text-white">
                                     <span>
-                                        {{ $item->hook?->name ?? 'Sin hook' }}
+                                        {{ $item->trigger?->name ?? 'Sin trigger' }}
                                     </span>
 
                                     <span class="text-gray-400">+</span>

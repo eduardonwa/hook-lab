@@ -40,7 +40,7 @@ class PlanLimitService
         return $cycle->items()->count() < $limit;
     }
 
-    public function canCreateGroup(User $user): bool
+    public function canCreateTriggerGroup(User $user): bool
     {
         $limit = $this->limit($user, 'max_groups');
 
@@ -48,7 +48,7 @@ class PlanLimitService
             return true;
         }
 
-        return $user->hookGroups()->count() < $limit;
+        return $user->triggerGroups()->count() < $limit;
     }
 
     public function canCreateCustomHook(User $user): bool
@@ -80,9 +80,10 @@ class PlanLimitService
         return $pinnedCount < $limit;
     }
 
-    public function canUseQuickHookGenerator(User $user): bool
+    /* QUICK HOOK GENERATOR */
+    public function canUseQuickTriggerGenerator(User $user): bool
     {
-        $limit = $this->limit($user, 'max_daily_quick_hooks');
+        $limit = $this->limit($user, 'max_daily_quick_triggers');
 
         if (is_null($limit)) {
             return true;
@@ -90,24 +91,24 @@ class PlanLimitService
 
         $usedToday = UsageEvent::query()
             ->where('user_id', $user->id)
-            ->where('feature', 'quick_hook_generator')
+            ->where('feature', 'quick_trigger_generator')
             ->whereDate('created_at', now()->toDateString())
             ->count();
 
         return $usedToday < $limit;
     }
 
-    public function recordQuickHookGeneratorUse(User $user): void
+    public function recordQuickTriggerGeneratorUse(User $user): void
     {
         UsageEvent::create([
             'user_id' => $user->id,
-            'feature' => 'quick_hook_generator',
+            'feature' => 'quick_trigger_generator',
         ]);
     }
 
-    public function quickHookGeneratorUsesRemaining(User $user): ?int
+    public function quickTriggerGeneratorUsesRemaining(User $user): ?int
     {
-        $limit = $this->limit($user, 'max_daily_quick_hooks');
+        $limit = $this->limit($user, 'max_daily_quick_triggers');
 
         if (is_null($limit)) {
             return null;
@@ -115,32 +116,10 @@ class PlanLimitService
 
         $usedToday = UsageEvent::query()
             ->where('user_id', $user->id)
-            ->where('feature', 'quick_hook_generator')
+            ->where('feature', 'quick_trigger_generator')
             ->whereDate('created_at', now()->toDateString())
             ->count();
 
         return max(0, $limit - $usedToday);
-    }
-
-    public function canCreateIdea(User $user): bool
-    {
-        $limit = $this->limit($user, 'max_ideas');
-
-        if (is_null($limit)) {
-            return true;
-        }
-
-        return $user->ideas()->count() < $limit;
-    }
-
-    public function ideasRemaining(User $user): ?int
-    {
-        $limit = $this->limit($user, 'max_ideas');
-
-        if (is_null($limit)) {
-            return null;
-        }
-
-        return max(0, $limit - $user->ideas()->count());
     }
 }

@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Models\CycleItem;
-use App\Models\Hook;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,13 +26,13 @@ class Cycle extends Model
             ->orderBy('position');
     }
 
-    public function bagHooks(): BelongsToMany
+    public function bagTriggers(): BelongsToMany
     {
         return $this->belongsToMany(
-            Hook::class,
-            'cycle_hook_bag',
+            Trigger::class,
+            'cycle_trigger_bag',
             'cycle_id',
-            'hook_id'
+            'trigger_id'
         )->withTimestamps();
     }
 }
