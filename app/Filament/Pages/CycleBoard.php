@@ -11,10 +11,14 @@ use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Auth;
@@ -78,7 +82,7 @@ class CycleBoard extends Page implements HasActions
             ->label('Editar carta')
             ->size('sm')
             ->icon('heroicon-o-adjustments-horizontal')
-            ->modalWidth(Width::Large)
+            ->modalWidth(Width::FourExtraLarge)
             ->modalSubmitActionLabel('Guardar carta')
             ->modalCancelActionLabel('Cancelar')
             ->mountUsing(function (array $arguments): void {
@@ -93,50 +97,67 @@ class CycleBoard extends Page implements HasActions
                 $this->editingTriggerDescription = $item->trigger?->description;
             })
             ->schema([
-                TextEntry::make('current_trigger_name')
-                    ->label('Trigger')
-                    ->color('gray')
-                    ->state(function () {
-                        if (! $this->editingItemId) {
-                            return '-';
-                        }
-
-                        $item = CycleItem::query()
-                            ->where('cycle_id', $this->cycle->id)
-                            ->with('trigger')
-                            ->find($this->editingItemId);
-
-                        return $item?->trigger?->name ?? '-';
-                    }),
-
-                TextEntry::make('current_trigger_description')
-                    ->label('Descripción')
-                    ->color('gray')
-                    ->state(function () {
-                        if (! $this->editingItemId) {
-                            return '-';
-                        }
-
-                        $item = CycleItem::query()
-                            ->where('cycle_id', $this->cycle->id)
-                            ->with('trigger')
-                            ->find($this->editingItemId);
-
-                        $description = $item->trigger?->description;
-
-                        if (blank($description)) {
-                            return '-';
-                        }
-
-                        return str($description)
-                            ->replace(["\r\n", "\r"], "\n")
-                            ->trim()
-                            ->replaceMatches("/\n{3,}/", "\n\n")
-                            ->toString();
-                    })
-                    ->extraAttributes([
-                        'class' => 'whitespace-pre-line',
-                    ]),
+                Grid::make(2)
+                    ->schema([
+                        Grid::make(1)
+                            ->schema([
+                                TextEntry::make('current_trigger_name')
+                                    ->label('Trigger')
+                                    ->color('gray')
+                                    ->state(function () {
+                                        if (! $this->editingItemId) {
+                                            return '-';
+                                        }
+                
+                                        $item = CycleItem::query()
+                                            ->where('cycle_id', $this->cycle->id)
+                                            ->with('trigger')
+                                            ->find($this->editingItemId);
+                
+                                        return $item?->trigger?->name ?? '-';
+                                    }),
+                
+                                TextEntry::make('current_trigger_description')
+                                    ->label('Descripción')
+                                    ->color('gray')
+                                    ->state(function () {
+                                        if (! $this->editingItemId) {
+                                            return '-';
+                                        }
+                
+                                        $item = CycleItem::query()
+                                            ->where('cycle_id', $this->cycle->id)
+                                            ->with('trigger')
+                                            ->find($this->editingItemId);
+                
+                                        return $this->cleanText($item?->trigger?->description);
+                                    })
+                                    ->formatStateUsing(fn (string $state) => new HtmlString(nl2br(e($state))))
+                                    ->html(),
+                            ]),
+                        Grid::make(1)
+                            ->schema([
+                                Tabs::make('Infermayshin tabs')
+                                    ->tabs([
+                                        Tab::make('Çontent')
+                                            ->schema([
+                                                TextInput::make('hook_text')
+                                                    ->label('Hook'),
+                
+                                                TextInput::make('idea_text')
+                                                    ->label('Idea'),
+                
+                                                Textarea::make('notes')
+                                                    ->label('Notas')
+                                                    ->autosize()
+                                                    ->rows(4),
+                                            ])
+                                    ])
+                                    ->extraAttributes([
+                                        'class' => 'border-none shadow-none ring-0',
+                                    ]),
+                            ])
+                    ])
             ])
             ->action(function (): void {
                 if (! $this->editingItemId) {
@@ -469,5 +490,19 @@ class CycleBoard extends Page implements HasActions
 
                 // Conectar checkout después
             });
+    }
+
+    private function cleanText(?string $text): string
+    {
+        if (blank($text)) {
+            return '-';
+        }
+
+        return str($text)
+            ->replace(["\r\n", "\r"], "\n")
+            ->trim()
+            ->replaceMatches("/[ \t]+$/m", '')
+            ->replaceMatches("/\n{3,}/", "\n")
+            ->toString();
     }
 }
