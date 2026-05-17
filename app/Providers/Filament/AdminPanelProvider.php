@@ -13,11 +13,13 @@ use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
@@ -49,13 +51,22 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
             ])
-            ->topNavigation()
             ->navigationGroups([
                 NavigationGroup::make('Planeador')
             ])
+            ->renderHook(
+                PanelsRenderHook::SIDEBAR_NAV_START,
+                fn () => Blade::render("@livewire('filament.sidebar.new-deck-button')")
+            )
+
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => Blade::render("@livewire('filament.global.new-deck-modal')")
+            )
             ->darkMode(true)
             ->defaultThemeMode(ThemeMode::Dark)
             ->profile()
+            ->sidebarCollapsibleOnDesktop()
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

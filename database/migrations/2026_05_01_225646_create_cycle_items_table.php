@@ -17,10 +17,15 @@ return new class extends Migration
             $table->foreignId('cycle_id')->constrained()->cascadeOnDelete();
             $table->foreignId('trigger_id')->constrained()->cascadeOnDelete();
             $table->foreignId('hook_id')->nullable()->constrained()->cascadeOnDelete();
-
+            
             $table->text('hook_text')->nullable();
-            $table->text('idea_text')->nullable();
             $table->text('note')->nullable();
+            $table->text('idea_text')->nullable();
+            $table->string('idea_context')->nullable();
+            $table->string('format')->nullable();
+
+            $table->unsignedTinyInteger('motivation_level')->default(3);
+            $table->unsignedTinyInteger('friction_level')->nullable();
 
             $table->boolean('is_pinned')->default(false);
             $table->timestamp('pinned_at')->nullable();

@@ -2,7 +2,48 @@
 
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
+@source '../../../../resources/views/components/**/*.blade.php';
+
+[x-cloak] { display: none !important; }
 
 .idea-select-with-create button svg {
     color: oklch(74% 0.238 322.16);
+}
+
+.card-side-tabs .fi-tabs {
+    justify-content: center;
+}
+
+.card-front-slider {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 1.5rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    padding-bottom: 1rem;
+}
+
+.card-front-slide {
+    flex: 0 0 100%;
+    min-width: 100%;
+    scroll-snap-align: start;
+}
+
+/* Sidebar cerrada: quitar fondo activo del item actual */
+.hl-sidebar-collapsed .fi-sidebar-item.fi-active > .fi-sidebar-item-btn {
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+/* También por si Filament lo marca desde el anchor */
+.hl-sidebar-collapsed .fi-sidebar-item-btn[data-current] {
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Opcional: quitar color activo del icono también */
+.hl-sidebar-collapsed .fi-sidebar-item.fi-active .fi-sidebar-item-icon,
+.hl-sidebar-collapsed .fi-sidebar-item-btn[data-current] .fi-sidebar-item-icon {
+    color: rgb(161 161 170) !important;
 }

@@ -25,6 +25,8 @@ class Dashboard extends Page
 
     protected static ?string $navigationLabel = 'Inicio';
 
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-home';
+
     protected static ?int $navigationSort = 1;
 
     public function getTitle(): string

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\IdeaContext;
 use App\Models\Cycle;
 use App\Models\Hook;
 use App\Models\Trigger;
@@ -15,7 +16,8 @@ class CycleItem extends Model
     
     protected $casts = [
         'is_pinned' => 'boolean',
-        'pinned_at' => 'datetime'
+        'pinned_at' => 'datetime',
+        'idea_context' => IdeaContext::class
     ];
     
     public function cycle(): BelongsTo

@@ -1,37 +1,38 @@
 <?php
 
-namespace App\Filament\Pages;
+use Livewire\Component;
+use Livewire\Attributes\On;
 
-use App\Filament\Pages\CycleBoard;
-use App\Models\Trigger;
+use Filament\Actions\Action;
+use Filament\Actions\Contracts\HasActions;
+use Filament\Actions\Concerns\InteractsWithActions;
+
+use Filament\Schemas\Contracts\HasSchemas;
+use Filament\Schemas\Concerns\InteractsWithSchemas;
+
 use App\Models\TriggerGroup;
 use App\Services\CycleNameGenerator;
-use App\Services\Cycles\CreateCycleService;
 use App\Services\PlanLimitService;
-use Filament\Actions\Action;
-use Filament\Actions\Concerns\InteractsWithActions;
-use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
-use Filament\Pages\Page;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-class CyclesManager extends Page implements HasActions
+use App\Services\Cycles\CreateCycleService;
+
+new class extends Component implements HasActions, HasSchemas
 {
     use InteractsWithActions;
+    use InteractsWithSchemas;
 
-    protected string $view = 'filament.pages.cycles-manager';
-
-    protected static string | \BackedEnum | null $navigationIcon = 'icon-deck-icon';
-    protected static string | \UnitEnum | null $navigationGroup = 'Colección';
-
-    protected static ?string $navigationLabel = 'Barajas';
-    protected static ?string $title = 'Barajas';
-    protected static ?int $navigationSort = 2;
+    #[On('open-new-deck-modal')]
+    public function openNewDeckModal(): void
+    {
+        $this->mountAction('createCycle');
+    }
 
     public function createCycleAction(): Action
     {
@@ -72,22 +73,6 @@ class CyclesManager extends Page implements HasActions
                     ->default(fn () => $this->maxCombosPerCycle())
                     ->disabled(fn () => $this->availableTriggersQuery()->count() === 0)
                     ->live()
-                    ->helperText(function ($get) {
-                        $totalTriggers = $this->maxCombosPerCycle();
-                        $count = (int) ($get('random_triggers_count') ?? 0);
-
-                        if ($totalTriggers === 0) {
-                            return 'No hay triggers disponibles todavía.';
-                        }
-
-                        if ($count >= $totalTriggers) {
-                            return "Se llenará esta baraja con {$totalTriggers} cartas.";
-                        }
-
-                        $remaining = $totalTriggers - $count;
-
-                        return "{$remaining} espacios quedarán libres en esta baraja.";
-                    })
                     ->visible(fn ($get) => $get('start_mode') === 'random_triggers')
                     ->required(fn ($get) => $get('start_mode') === 'random_triggers'),
 
@@ -122,7 +107,7 @@ class CyclesManager extends Page implements HasActions
                         ->success()
                         ->send();
 
-                     $this->dispatch('$refresh');
+                    $this->js('setTimeout(() => window.location.reload(), 400)');
                 } catch (\RuntimeException $e) {
                     if ($e->getMessage() === 'deck_limit_reached') {
                         /** @var PlanLimitService $limits */
@@ -132,92 +117,14 @@ class CyclesManager extends Page implements HasActions
 
                         Notification::make()
                             ->title('Límite alcanzado')
-                            ->body("Tu plan permite crear hasta {$maxDecks} barajas.")
+                            ->body("Tu plan permite crear hasta {$maxDecks} barajas")
                             ->warning()
                             ->send();
 
-                        return;
+                            return;
                     }
-
                     throw $e;
                 }
-            });
-    }
-
-    public function viewCycleAction(): Action
-    {
-        return Action::make('viewCycle')
-            ->label('Ver baraja')
-            ->icon('heroicon-o-eye')
-            ->modalHeading(function (array $arguments): string {
-                $cycle = Auth::user()
-                    ->cycles()
-                    ->find($arguments['cycle_id']);
-
-                return $cycle?->name ?? 'Baraja';
-            })
-            ->modalSubmitAction(false)
-            ->modalCancelActionLabel('Cerrar')
-            ->extraAttributes([
-                'class' => 'ml-auto',
-            ])
-            ->modalContent(function (array $arguments) {
-                $cycle = Auth::user()
-                    ->cycles()
-                    ->with([
-                        'items.trigger',
-                        'items.hook',
-                    ])
-                    ->findOrFail($arguments['cycle_id']);
-
-                return view('filament.pages.cycles-manager-view-cycle-modal', [
-                    'cycle' => $cycle,
-                ]);
-            })
-            ->extraModalFooterActions(function (array $arguments): array {
-                return [
-                    Action::make('editCycle')
-                        ->label('Editar baraja')
-                        ->icon('heroicon-o-pencil-square')
-                        ->color('primary')
-                        ->extraAttributes([
-                            'class' => 'ml-auto',
-                        ])
-                        ->url(fn () => CycleBoard::getUrl([
-                            'cycle' => $arguments['cycle_id']
-                        ]))
-                ];
-            });
-    }
-
-    public function getCyclesProperty()
-    {
-        return Auth::user()
-            ->cycles()
-            ->withCount(['items', 'bagTriggers'])
-            ->latest()
-            ->get();
-    }
-
-    public function removeCycleAction(): Action
-    {
-        return Action::make('removeCycle')
-            ->label('Eliminar baraja')
-            ->icon('heroicon-o-trash')
-            ->color('danger')
-            ->requiresConfirmation()
-            ->modalHeading('Eliminar baraja')
-            ->modalDescription('Esto eliminará la baraja, sus cartas y su bolsa. Esta acción no se puede deshacer.')
-            ->modalSubmitActionLabel('Eliminar')
-            ->modalCancelActionLabel('Cancelar')
-            ->action(function (array $arguments): void {
-                $cycle = Auth::user()
-                    ->cycles()
-                    ->findOrFail((int) $arguments['cycle_id']);
-
-                $cycle->delete();
-
-                $this->dispatch('$refresh');
             });
     }
 
@@ -225,7 +132,7 @@ class CyclesManager extends Page implements HasActions
     {
         $user = Auth::user();
 
-        return Trigger::query()
+        return \App\Models\Trigger::query()
             ->where('is_active', true)
             ->whereIn(
                 'access_level',
@@ -252,4 +159,10 @@ class CyclesManager extends Page implements HasActions
 
         return min($availableTriggersCount, $planLimit);
     }
-}
+};
+
+?>
+
+<div>
+    <x-filament-actions::modals />
+</div>

@@ -2,10 +2,10 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Forms\Components\EmojiSlider;
 use App\Filament\Pages\CyclesManager;
 use App\Models\Cycle;
 use App\Models\CycleItem;
-use App\Models\Hook;
 use App\Services\PlanLimitService;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -14,6 +14,7 @@ use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\ViewField;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -108,102 +109,75 @@ class CycleBoard extends Page implements HasActions
             ->schema([
                 Grid::make(2)
                     ->schema([
-                        Grid::make(1)
-                            ->schema([
-                                TextEntry::make('current_trigger_name')
-                                    ->label('Trigger')
-                                    ->color('gray')
-                                    ->state(fn () => $this->editingTriggerName ?? '-'),
-
-                                TextEntry::make('current_trigger_description')
-                                    ->label('Descripción')
-                                    ->color('gray')
-                                    ->state(fn () => $this->cleanText($this->editingTriggerDescription))
-                                    ->formatStateUsing(fn (?string $state) => new HtmlString(nl2br(e($state ?? '-'))))
-                                    ->html(),
-                            ]),
-
-                        Grid::make(1)
-                            ->schema([
-                                Tabs::make('Content')
-                                    ->tabs([
-                                        Tab::make('Contenido')
+                        Tabs::make('Carta')
+                            ->tabs([
+                                Tab::make('Reverso')
+                                    ->schema([
+                                        Grid::make(2)
                                             ->schema([
-                                                Select::make('hook_id')
-                                                    ->label('Hook desde biblioteca')
-                                                    ->options(function () {
-                                                        if (! $this->editingItemId) {
-                                                            return [];
-                                                        }
+                                                Grid::make(1)
+                                                    ->schema([
+                                                        ViewField::make('card_back_preview')
+                                                            ->label('')
+                                                            ->view('filament.forms.components.card-back-preview'),
+                                                    ]),
+                                                Grid::make(1)
+                                                    ->schema([
+                                                        TextEntry::make('current_trigger_name')
+                                                            ->label('Trigger')
+                                                            ->color('gray')
+                                                            ->state(fn () => $this->editingTriggerName ?? '-'),
 
-                                                        $item = CycleItem::query()
-                                                            ->where('cycle_id', $this->cycle->id)
-                                                            ->findOrFail($this->editingItemId);
-
-                                                        $user = Auth::user();
-
-                                                        return Hook::query()
-                                                            ->where(function ($query) use ($item) {
-                                                                $query
-                                                                    ->where('trigger_id', $item->trigger_id)
-                                                                    ->orWhereNull('trigger_id');
-                                                            })
-                                                            ->where(function ($query) use ($user) {
-                                                                $query
-                                                                    ->where('user_id', $user->id)
-                                                                    ->orWhere(function ($query) use ($user) {
-                                                                        $query
-                                                                            ->whereNull('user_id')
-                                                                            ->whereIn(
-                                                                                'access_level',
-                                                                                $user->isPro()
-                                                                                    ? ['free', 'pro']
-                                                                                    : ['free']
-                                                                            );
-                                                                    });
-                                                            })
-                                                            ->orderBy('name')
-                                                            ->pluck('name', 'id')
-                                                            ->toArray();
-                                                    })
-                                                    ->searchable()
-                                                    ->preload()
-                                                    ->nullable()
-                                                    ->live()
-                                                    ->afterStateUpdated(function ($state, callable $set): void {
-                                                        if (! $state) {
-                                                            return;
-                                                        }
-
-                                                        $hook = Hook::query()->find($state);
-
-                                                        if (! $hook) {
-                                                            return;
-                                                        }
-
-                                                        $set('hook_text', $hook->template ?? $hook->name);
-                                                    }),
-
-                                                Textarea::make('hook_text')
-                                                    ->label('Hook')
-                                                    ->autosize()
-                                                    ->rows(2),
-
-                                                Textarea::make('idea_text')
-                                                    ->label('Idea')
-                                                    ->autosize()
-                                                    ->rows(2),
-
-                                                Textarea::make('note')
-                                                    ->label('Notas')
-                                                    ->autosize()
-                                                    ->rows(4),
-                                            ]),
-                                    ])
-                                    ->extraAttributes([
-                                        'class' => 'border-none shadow-none ring-0',
+                                                        TextEntry::make('current_trigger_description')
+                                                            ->label('Descripción')
+                                                            ->color('gray')
+                                                            ->state(fn () => $this->cleanText($this->editingTriggerDescription))
+                                                            ->formatStateUsing(fn (?string $state) => new HtmlString(nl2br(e($state ?? '-'))))
+                                                            ->html(),
+                                                    ])
+                                                    ->extraAttributes([
+                                                        'class' => 'flex flex-col justify-center items-center text-center h-full',
+                                                    ])
+                                            ])
+                                            ->extraAttributes([
+                                                'class' => 'card-info'
+                                            ])
                                     ]),
-                            ]),
+                                Tab::make('Frente')
+                                    ->schema([
+                                        ViewField::make('front_slider')
+                                            ->hiddenLabel()
+                                            ->view('filament.forms.components.card-front-slider')
+                                            ->columnSpanFull(),
+
+                                        Textarea::make('note')
+                                            ->label('Notas')
+                                            ->autosize()
+                                            ->rows(4),
+
+                                        EmojiSlider::make('motivation_level')
+                                            ->label('Motivación')
+                                            ->showOptionText(false)
+                                            ->default(3),
+
+                                        EmojiSlider::make('friction_level')
+                                            ->label('Fricción')
+                                            ->helperText('¿Qué tan pesada se siente de ejecutar?')
+                                            ->emojiLabels([
+                                                1 => '🪶 Fácil',
+                                                2 => '👌 Leve',
+                                                3 => '🧱 Media',
+                                                4 => '🥴 Pesada',
+                                                5 => '⛓️ Trabada',
+                                            ])
+                                            ->default(3),
+                                    ])
+                            ])
+                            ->columnSpanFull()
+                            ->activeTab(2)
+                            ->extraAttributes([
+                                'class' => 'border-none shadow-none ring-0 card-side-tabs',
+                            ])
                     ]),
             ])
             ->action(function (array $data): void {
