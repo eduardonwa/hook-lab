@@ -107,7 +107,7 @@ new class extends Component implements HasActions, HasSchemas
                         ->success()
                         ->send();
 
-                    $this->js('setTimeout(() => window.location.reload(), 400)');
+                    $this->redirect(route('filament.admin.pages.dashboard'));
                 } catch (\RuntimeException $e) {
                     if ($e->getMessage() === 'deck_limit_reached') {
                         /** @var PlanLimitService $limits */
