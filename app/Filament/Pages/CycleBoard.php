@@ -88,6 +88,7 @@ class CycleBoard extends Page implements HasActions
             ->modalWidth(Width::FourExtraLarge)
             ->modalSubmitActionLabel('Guardar carta')
             ->modalCancelActionLabel('Cancelar')
+            ->modalFooterActionsAlignment(Alignment::End)
             ->mountUsing(function (Schema $schema, array $arguments): void {
                 $this->editingItemId = (int) $arguments['item_id'];
 
@@ -109,75 +110,63 @@ class CycleBoard extends Page implements HasActions
             ->schema([
                 Grid::make(2)
                     ->schema([
-                        Tabs::make('Carta')
-                            ->tabs([
-                                Tab::make('Reverso')
-                                    ->schema([
-                                        Grid::make(2)
-                                            ->schema([
-                                                Grid::make(1)
-                                                    ->schema([
-                                                        ViewField::make('card_back_preview')
-                                                            ->label('')
-                                                            ->view('filament.forms.components.card-back-preview'),
-                                                    ]),
-                                                Grid::make(1)
-                                                    ->schema([
-                                                        TextEntry::make('current_trigger_name')
-                                                            ->label('Trigger')
-                                                            ->color('gray')
-                                                            ->state(fn () => $this->editingTriggerName ?? '-'),
+                        Grid::make([
+                            'default' => 1,
+                            'lg' => 5
+                        ])
+                        ->schema([
+                            ViewField::make('card_front_preview')
+                                ->hiddenLabel()
+                                ->view('filament.forms.components.card-back-preview')
+                                ->columnSpan([
+                                    'default' => 1,
+                                    'lg' => 2
+                                ])
+                                ->extraFieldWrapperAttributes([
+                                    'class' => 'card-preview-field',
+                                ]),
+                            
+                            Tabs::make('Editor')
+                                ->tabs([
+                                    Tab::make('Contenido')
+                                        ->schema([
+                                            ViewField::make('front_slider')
+                                                ->hiddenLabel()
+                                                ->view('filament.forms.components.card-front-slider')
+                                                ->columnSpanFull()
+                                        ]),
+                                    
+                                    Tab::make('Notas')
+                                        ->schema([
+                                            Textarea::make('note')
+                                                ->label('Notas')
+                                                ->autosize()
+                                                ->rows(4),
+                                            
+                                            EmojiSlider::make('motivation_level')
+                                                ->label('Motivación')
+                                                ->showOptionText(false)
+                                                ->default(3),
 
-                                                        TextEntry::make('current_trigger_description')
-                                                            ->label('Descripción')
-                                                            ->color('gray')
-                                                            ->state(fn () => $this->cleanText($this->editingTriggerDescription))
-                                                            ->formatStateUsing(fn (?string $state) => new HtmlString(nl2br(e($state ?? '-'))))
-                                                            ->html(),
-                                                    ])
-                                                    ->extraAttributes([
-                                                        'class' => 'flex flex-col justify-center items-center text-center h-full',
-                                                    ])
-                                            ])
-                                            ->extraAttributes([
-                                                'class' => 'card-info'
-                                            ])
-                                    ]),
-                                Tab::make('Frente')
-                                    ->schema([
-                                        ViewField::make('front_slider')
-                                            ->hiddenLabel()
-                                            ->view('filament.forms.components.card-front-slider')
-                                            ->columnSpanFull(),
-
-                                        Textarea::make('note')
-                                            ->label('Notas')
-                                            ->autosize()
-                                            ->rows(4),
-
-                                        EmojiSlider::make('motivation_level')
-                                            ->label('Motivación')
-                                            ->showOptionText(false)
-                                            ->default(3),
-
-                                        EmojiSlider::make('friction_level')
-                                            ->label('Fricción')
-                                            ->helperText('¿Qué tan pesada se siente de ejecutar?')
-                                            ->emojiLabels([
-                                                1 => '🪶 Fácil',
-                                                2 => '👌 Leve',
-                                                3 => '🧱 Media',
-                                                4 => '🥴 Pesada',
-                                                5 => '⛓️ Trabada',
-                                            ])
-                                            ->default(3),
-                                    ])
-                            ])
-                            ->columnSpanFull()
-                            ->activeTab(2)
-                            ->extraAttributes([
-                                'class' => 'border-none shadow-none ring-0 card-side-tabs',
-                            ])
+                                            EmojiSlider::make('friction_level')
+                                                ->label('Fricción')
+                                                ->helperText('¿Qué tan pesada se siente de ejecutar?')
+                                                ->emojiLabels([
+                                                    1 => '🪶 Fácil',
+                                                    2 => '👌 Leve',
+                                                    3 => '🧱 Media',
+                                                    4 => '🥴 Pesada',
+                                                    5 => '⛓️ Trabada',
+                                                ])
+                                                ->default(3)
+                                        ]),
+                                ])
+                                ->columnSpan([
+                                    'default' => 1,
+                                    'lg' => 3
+                                ]),
+                        ])
+                        ->columnSpanFull()
                     ]),
             ])
             ->action(function (array $data): void {

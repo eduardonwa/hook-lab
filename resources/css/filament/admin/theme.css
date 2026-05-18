@@ -47,3 +47,45 @@
 .hl-sidebar-collapsed .fi-sidebar-item-btn[data-current] .fi-sidebar-item-icon {
     color: rgb(161 161 170) !important;
 }
+
+/* EDIT CARD MODAL */
+
+/* CARD IMAGE */
+.card-preview-field {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-preview-field > .fi-sc-component,
+.card-preview-field .fi-fo-field,
+.card-preview-field .fi-fo-field-content-col {
+    height: 100%;
+    width: 100%;
+}
+
+.card-preview-field .fi-fo-field-content-col {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* SCROLL DESCRIPCION TRIGGER */
+.card-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+
+.card-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.card-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+}
+
+.card-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
