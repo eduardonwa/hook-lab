@@ -2,80 +2,24 @@
     :component="$getFieldWrapperView()"
     :field="$field"
 >
-    <div
-        x-data="{ activeSlide: 0 }"
-        class="space-y-4"
-    >
-        <div class="flex gap-2">
-            <button
-                type="button"
-                x-on:click="activeSlide = 0"
-                x-bind:class="activeSlide === 0 ? 'border border-primary-600' : 'border-white/5 text-gray-400'"
-                class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
-            >
-                Hook
-            </button>
-
-            <button
-                type="button"
-                x-on:click="activeSlide = 1"
-                x-bind:class="activeSlide === 1 ? 'border border-primary-600' : 'border-white/5 text-gray-400'"
-                class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
-            >
+    <div class="space-y-5">
+        <fieldset>
+            <legend class="text-purple-300 text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
                 Idea
-            </button>
-        </div>
+            </legend>
 
-        <div class="relative min-h-[240px] overflow-hidden">
-            {{-- HOOK FIELDS --}}
-            <section class="absolute inset space-y-4 w-full shrink-0"
-                x-show="activeSlide === 0"
-                x-transition.opacity.duration.150ms
-                class="space-y-4"
-            >
+            <div class="space-y-5">
                 <div>
-                    <label class="text-sm font-semibold">
-                        Hook desde biblioteca
-                    </label>
-
-                    <select
-                        wire:model="mountedActionsData.0.hook_id"
-                        class="mt-2 w-full rounded-lg border border-black/10 dark:border-white/10 px-3 py-2 text-sm"
-                    >
-                        <option value="">Seleccione una opción</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="text-sm font-semibold">
-                        Hook
-                    </label>
-
-                    <textarea
-                        wire:model="mountedActionsData.0.hook_text"
-                        rows="3"
-                        class="bg-gray-400/10 mt-2 w-full rounded-lg border border-white/10 px-3 py-2 text-sm
-                                outline-none
-                                focus:border-primary-500
-                                focus:ring-1 focus:ring-primary-500
-                                focus:ring-offset-0
-                        "
-                    ></textarea>
-                </div>
-            </section>
-
-            {{-- IDEA FIELDS --}}
-            <section class="absolute inset space-y-4 w-full shrink-0"
-                x-show="activeSlide === 1"
-                x-transition.opacity.duration.150ms
-            >
-                <div>
-                    <label class="text-sm font-semibold">
+                    <label class="block mt-2 text-sm font-semibold">
                         Contexto
                     </label>
 
+                    <p class="mt-2 text-sm text-gray-400">
+                        Elige un ángulo para que puedas ubicarla dentro de tu nicho.
+                    </p>
+
                     <select
-                        wire:model="mountedActionsData.0.idea_context"
+                        wire:model="mountedActions.0.data.idea_context"
                         class="mt-2 w-full rounded-lg border border-black/10 dark:border-white/10 px-3 py-2 text-sm"
                     >
                         <option value="">Seleccione una opción</option>
@@ -88,10 +32,6 @@
                         <option value="broad_reading">Lectura amplia</option>
                         <option value="off_topic">Fuera de tema</option>
                     </select>
-
-                    <p class="mt-2 text-sm text-gray-400">
-                        Elige un ángulo para que puedas ubicarla dentro de tu nicho.
-                    </p>
                 </div>
 
                 <div>
@@ -100,17 +40,45 @@
                     </label>
 
                     <textarea
-                        wire:model="mountedActionsData.0.idea_text"
+                        wire:model="mountedActions.0.data.idea_text"
                         rows="3"
-                        class="bg-gray-400/10 mt-2 w-full rounded-lg border border-white/10 px-3 py-2 text-sm
-                            outline-none
-                            focus:border-primary-500
-                            focus:ring-1 focus:ring-primary-500
-                            focus:ring-offset-0
-                        "
+                        class="bg-gray-400/10 mt-2 w-full rounded-lg border border-white/10 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:ring-offset-0"
                     ></textarea>
                 </div>
-            </section>
-        </div>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend class="text-purple-300 text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+                Hook
+            </legend>
+
+            <div class="space-y-5">
+                <div>
+                    <label class="block mt-2 text-sm font-semibold">
+                        Desde biblioteca
+                    </label>
+
+                    <select
+                        wire:model="mountedActions.0.data.hook_id"
+                        class="mt-2 w-full rounded-lg border border-black/10 dark:border-white/10 px-3 py-2 text-sm"
+                    >
+                        <option value="">Seleccione una opción</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-sm font-semibold">
+                        Hook
+                    </label>
+
+                    <textarea
+                        wire:model="mountedActions.0.data.hook_text"
+                        rows="3"
+                        class="bg-gray-400/10 mt-2 w-full rounded-lg border border-white/10 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:ring-offset-0"
+                    ></textarea>
+                </div>
+            </div>
+        </fieldset>
     </div>
 </x-dynamic-component>

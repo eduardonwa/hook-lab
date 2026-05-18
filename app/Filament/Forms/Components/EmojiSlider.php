@@ -13,7 +13,7 @@ class EmojiSlider extends Field
         2 => '😐 Baja',
         3 => '🙂 Normal',
         4 => '🔥 Buena',
-        5 => '⚡ Hagamos esto',
+        5 => '⚡ A darle',
     ];
 
     protected bool $showOptionText = true;

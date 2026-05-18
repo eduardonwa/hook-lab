@@ -27,8 +27,8 @@ class TriggerManager extends Page implements HasTable
     
     protected static string | \BackedEnum | null $navigationIcon = 'icon-hook-icon';
     protected static string | \UnitEnum | null $navigationGroup = 'Planeador';
-    protected static ?string $title = 'Triggers';
-    protected static ?string $navigationLabel = 'Triggers';
+    protected static ?string $title = 'Impulsos';
+    protected static ?string $navigationLabel = 'Impulsos';
     protected static ?int $navigationSort = 1;
     
     public string $activeTab = 'groups';

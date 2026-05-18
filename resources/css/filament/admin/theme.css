@@ -89,3 +89,9 @@
 .card-scroll::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.4);
 }
+
+/* INPUT RANGE */
+.fi-modal-footer-actions {
+    margin: auto;
+    width: 280px;
+}

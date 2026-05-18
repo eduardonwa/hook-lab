@@ -10,12 +10,12 @@ use App\Services\PlanLimitService;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ViewField;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Grid;
@@ -88,7 +88,8 @@ class CycleBoard extends Page implements HasActions
             ->modalWidth(Width::FourExtraLarge)
             ->modalSubmitActionLabel('Guardar carta')
             ->modalCancelActionLabel('Cancelar')
-            ->modalFooterActionsAlignment(Alignment::End)
+            ->modalSubmitAction(false)
+            ->modalFooterActionsAlignment(Alignment::Center)
             ->mountUsing(function (Schema $schema, array $arguments): void {
                 $this->editingItemId = (int) $arguments['item_id'];
 
@@ -104,6 +105,7 @@ class CycleBoard extends Page implements HasActions
                     'hook_id' => $item->hook_id,
                     'hook_text' => $item->hook_text,
                     'idea_text' => $item->idea_text,
+                    'idea_context' => $item->idea_context,
                     'note' => $item->note,
                 ]);
             })
@@ -130,6 +132,11 @@ class CycleBoard extends Page implements HasActions
                                 ->tabs([
                                     Tab::make('Contenido')
                                         ->schema([
+                                            Hidden::make('hook_id'),
+                                            Hidden::make('hook_text'),
+                                            Hidden::make('idea_context'),
+                                            Hidden::make('idea_text'),
+                                            
                                             ViewField::make('front_slider')
                                                 ->hiddenLabel()
                                                 ->view('filament.forms.components.card-front-slider')
@@ -169,30 +176,60 @@ class CycleBoard extends Page implements HasActions
                         ->columnSpanFull()
                     ]),
             ])
+            ->extraModalFooterActions([
+                Action::make('saveAndKeepEditing')
+                    ->label('Guardar')
+                    ->color('primary')
+                    ->action(function (array $data): void {
+                        $this->saveCardData($data);
+
+                        Notification::make()
+                            ->title('Carta guardada')
+                            ->success()
+                            ->send();
+                    }),
+            ])
             ->action(function (array $data): void {
                 if (! $this->editingItemId) {
                     return;
                 }
 
-                $item = CycleItem::query()
-                    ->where('cycle_id', $this->cycle->id)
-                    ->findOrFail($this->editingItemId);
+                $this->saveCardData($data);
 
-                $item->update([
-                    'hook_id' => $data['hook_id'] ?? null,
-                    'hook_text' => $data['hook_text'] ?? null,
-                    'idea_text' => $data['idea_text'] ?? null,
-                    'note' => $data['note'] ?? null,
-                ]);
+                Notification::make()
+                    ->title('Carta guardada')
+                    ->success()
+                    ->send();
 
                 $this->editingItemId = null;
                 $this->editingTriggerName = null;
                 $this->editingTriggerDescription = null;
-
-                $this->refreshCycle();
-
-                $this->dispatch('$refresh');
             });
+    }
+
+    private function saveCardData(array $data): void
+    {
+        if (! $this->editingItemId) {
+            return;
+        }
+
+        $item = CycleItem::query()
+            ->where('cycle_id', $this->cycle->id)
+            ->findOrFail($this->editingItemId);
+
+        $item->update([
+            'hook_id' => $data['hook_id'] ?? null,
+            'hook_text' => $data['hook_text'] ?? null,
+            'idea_context' => $data['idea_context'] ?? null,
+            'idea_text' => $data['idea_text'] ?? null,
+            'note' => $data['note'] ?? null,
+            'motivation_level' => $data['motivation_level'] ?? 3,
+            'friction_level' => $data['friction_level'] ?? 3,
+        ]);
+
+        $this->refreshCycle();
+
+        $this->dispatch('$refresh');
     }
 
     protected function addTriggersToCycleFromBag(array $triggerIds): void

@@ -11,23 +11,31 @@
     :field="$field"
 >
     <div
-        x-data="{ state: $wire.$entangle(@js($getStatePath())) }"
-        labels: @js($labels),
-        min: {{ $min }},
-        max: {{ $max }},
-        get label() {
-            return this.labels[this.state] ?? 'Sin medir';
-        }
-        class="space-y-3"
+        x-data="{
+            state: $wire.$entangle(@js($statePath)),
+            labels: @js($labels),
+            min: @js($min),
+            max: @js($max),
+            get label() {
+                return this.labels[this.state] ?? 'Sin medir';
+            },
+        }"
+        class="space-y-2"
         {{ $getExtraAttributeBag() }}
     >
-        <div class="flex items-center justify-between gap-3">
-            <div class="text-sm font-medium text-gray-950 dark:text-white">
-                <span x-text="label"></span>
-            </div>
+        <div class="flex items-center justify-between border-b border-white/10 pb-2">
+            <span class="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400">
+                Estado
+            </span>
 
-            <div class="text-xs text-gray-500 dark:text-gray-400">
+            <span class="text-xs font-mono text-gray-500">
                 <span x-text="state ?? '—'"></span>/{{ $max }}
+            </span>
+        </div>
+
+        <div class="flex items-center justify-between gap-3">
+            <div class="text-sm font-semibold text-white">
+                <span x-text="label"></span>
             </div>
         </div>
 
@@ -44,30 +52,23 @@
             "
         />
 
-        <div class="flex justify-between">
+        <div class="grid grid-cols-5 gap-1 pt-1">
             @foreach ($labels as $value => $label)
                 @php
                     $parts = explode(' ', $label, 2);
-                    $emoji = $parts[0] ?? $label;
-                    $text = $parts[1] ?? '';
+                    $text = $parts[1] ?? $label;
                 @endphp
 
                 <button
                     type="button"
                     x-on:click="state = {{ $value }}"
-                    class="flex flex-col items-center gap-2 transition hover:scale-110"
+                    x-bind:class="Number(state) === {{ $value }}
+                        ? 'border-primary-500 bg-primary-500/10 text-white'
+                        : 'border-white/10 text-gray-500 hover:border-primary-500 hover:text-white'"
+                    class="rounded-md border border-white/10 px-2 py-1.5 text-center text-[10px] uppercase tracking-wide text-gray-500 transition hover:border-primary-500 hover:text-white"
                     title="{{ $label }}"
                 >
-                    <span class="text-2xl leading-none"
-                    >
-                        {{ $emoji }}
-                    </span>
-
-                    @if ($showOptionText)
-                        <span class="text-xs text-gray-500 dark:text-gray-400">
-                            {{ $text }}
-                        </span>
-                    @endif
+                    {{ $text }}
                 </button>
             @endforeach
         </div>
